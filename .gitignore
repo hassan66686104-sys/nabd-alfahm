@@ -9,3 +9,4 @@ playwright-report
 supabase/.temp
 .vercel
 *.tsbuildinfo
+.netlify
