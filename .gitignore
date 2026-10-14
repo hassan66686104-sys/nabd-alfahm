@@ -1,0 +1,11 @@
+node_modules
+dist
+dev-dist
+.env
+.env.local
+*.local
+test-results
+playwright-report
+supabase/.temp
+.vercel
+*.tsbuildinfo

@@ -1,0 +1,69 @@
+import { lazy, Suspense, type ReactNode } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { useAuth } from './hooks/useAuth';
+import { isConfigured } from './lib/supabase';
+import { Spinner } from './components/ui';
+import TeacherLayout from './components/TeacherLayout';
+import Landing from './pages/Landing';
+import SetupNeeded from './pages/SetupNeeded';
+import { Login, Signup, ResetPassword } from './pages/Auth';
+import Join from './pages/student/Join';
+import Play from './pages/student/Play';
+
+const Dashboard = lazy(() => import('./pages/teacher/Dashboard'));
+const QuestionBank = lazy(() => import('./pages/teacher/QuestionBank'));
+const QuestionEditor = lazy(() => import('./pages/teacher/QuestionEditor'));
+const ImportQuestions = lazy(() => import('./pages/teacher/ImportQuestions'));
+const NewSession = lazy(() => import('./pages/teacher/NewSession'));
+const QuickCheck = lazy(() => import('./pages/teacher/QuickCheck'));
+const LiveSession = lazy(() => import('./pages/teacher/LiveSession'));
+const Present = lazy(() => import('./pages/teacher/Present'));
+const Reports = lazy(() => import('./pages/teacher/Reports'));
+const ReportDetail = lazy(() => import('./pages/teacher/ReportDetail'));
+const Settings = lazy(() => import('./pages/teacher/Settings'));
+
+function RequireTeacher({ children }: { children: ReactNode }) {
+  const { session, loading } = useAuth();
+  const loc = useLocation();
+  if (loading) return <Spinner />;
+  if (!session) return <Navigate to={`/login?next=${encodeURIComponent(loc.pathname + loc.search)}`} replace />;
+  return <>{children}</>;
+}
+
+export default function App() {
+  if (!isConfigured) {
+    return (
+      <Routes>
+        <Route path="*" element={<SetupNeeded />} />
+      </Routes>
+    );
+  }
+  return (
+    <Suspense fallback={<Spinner />}>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/reset" element={<ResetPassword />} />
+        <Route path="/join" element={<Join />} />
+        <Route path="/join/:code" element={<Join />} />
+        <Route path="/play" element={<Play />} />
+        <Route path="/present/:id" element={<RequireTeacher><Present /></RequireTeacher>} />
+        <Route path="/t" element={<RequireTeacher><TeacherLayout /></RequireTeacher>}>
+          <Route index element={<Dashboard />} />
+          <Route path="bank" element={<QuestionBank />} />
+          <Route path="bank/new" element={<QuestionEditor />} />
+          <Route path="bank/:id" element={<QuestionEditor />} />
+          <Route path="import" element={<ImportQuestions />} />
+          <Route path="sessions/new" element={<NewSession />} />
+          <Route path="quick" element={<QuickCheck />} />
+          <Route path="live/:id" element={<LiveSession />} />
+          <Route path="reports" element={<Reports />} />
+          <Route path="reports/:id" element={<ReportDetail />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
+  );
+}

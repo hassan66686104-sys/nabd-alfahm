@@ -1,0 +1,34 @@
+@import '@fontsource/cairo/400.css';
+@import '@fontsource/cairo/600.css';
+@import '@fontsource/cairo/700.css';
+@import '@fontsource/cairo/800.css';
+@import '@fontsource/amiri/400.css';
+@import '@fontsource/amiri/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-tap-highlight-color: transparent; }
+  body { @apply bg-ivory font-sans text-brand-900 antialiased; min-height: 100dvh; }
+  :focus-visible { outline: 3px solid #c9a227; outline-offset: 2px; }
+}
+
+@layer components {
+  .stimulus { @apply whitespace-pre-wrap rounded-2xl border-r-4 border-gold-400 bg-gold-50/60 p-4 font-quran text-xl leading-loose text-brand-900; }
+  .table-base { @apply w-full border-collapse text-sm; }
+  .table-base th { @apply border-b border-brand-100 bg-brand-50 px-3 py-2 text-start font-semibold text-brand-800; }
+  .table-base td { @apply border-b border-brand-50 px-3 py-2 align-top; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+  .print-break { break-inside: avoid; }
+  @page { margin: 14mm; }
+}
