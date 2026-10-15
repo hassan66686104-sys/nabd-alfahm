@@ -1,6 +1,6 @@
 // لوحة المعلم أثناء الحصة: التحكم بالأسئلة + المؤشرات اللحظية + الإجابات المفتوحة + المشاركون
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   CheckCircle2, ChevronLeft, Clock, Dice5, Eye, EyeOff, Flag, LibraryBig, MonitorPlay, Plus, RotateCcw, Send, Shuffle, Square, TimerOff,
   UserMinus, Users, XCircle, AlertTriangle, Cloud, LayoutGrid, List,
@@ -70,6 +70,7 @@ export default function LiveSession() {
   if (loading) return <Spinner label="جارٍ تحميل الحصة…" />;
   if (error && !session) return <ErrorBox error={error} onRetry={reload} />;
   if (!session) return null;
+  if (session.mode === 'self') return <Navigate to={`/t/challenge/${session.id}`} replace />;
 
   const ended = session.status === 'ended';
   const drafts = sqs.filter((s) => s.status === 'draft');

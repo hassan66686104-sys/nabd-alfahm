@@ -10,6 +10,7 @@ import { useLiveSession, useNow } from '@/hooks/useLiveSession';
 import { useSettings } from '@/hooks/useAuth';
 import { computeLeaderboard, computeQuestionStats } from '@/lib/stats';
 import { OPTION_LETTERS, gameLabel } from '@/lib/constants';
+import ChallengePresent from './ChallengePresent';
 
 export default function Present() {
   const { id } = useParams();
@@ -25,6 +26,7 @@ export default function Present() {
   if (loading) return <Spinner />;
   if (error && !session) return <div className="p-8"><ErrorBox error={error} /></div>;
   if (!session) return null;
+  if (session.mode === 'self') return <ChallengePresent id={session.id} />;
 
   const showNames = !session.hide_names && !session.anonymous;
   const showResults = !!sq && (!session.hide_results || sq.status === 'closed');

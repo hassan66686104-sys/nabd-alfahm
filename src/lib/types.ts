@@ -105,6 +105,10 @@ export interface Session {
   auto_approve_open: boolean;
   is_quick: boolean;
   current_sq_id: string | null;
+  mode: 'live' | 'self';
+  game: GameSettings;
+  ends_at: string | null;
+  winner_id: string | null;
   created_at: string;
   started_at: string | null;
   ended_at: string | null;
@@ -236,7 +240,59 @@ export interface StudentQuestion {
 export interface StudentState {
   ok: true;
   server_time: string;
-  session: { id: string; title: string; code: string; status: SessionStatus; anonymous: boolean; leaderboard_enabled: boolean };
+  session: { id: string; title: string; code: string; status: SessionStatus; anonymous: boolean; leaderboard_enabled: boolean; mode?: 'live' | 'self' };
   me: { id: string; alias: string; display_name: string; team: { id: string; name: string; color: string } | null; points: number | null };
   question: StudentQuestion | null;
 }
+
+// ---------- «تحدي الكأس»: لعب ذاتي ----------
+export interface GameSettings {
+  end?: 'time' | 'target';
+  minutes?: number;
+  target?: number;
+  powers?: boolean;
+  prize?: string;
+}
+export type GamePower = 'take' | 'freeze' | 'raid' | 'bomb';
+
+export interface GameEvent {
+  id: number;
+  kind: string;
+  amount: number;
+  actor: string | null;
+  target: string | null;
+  team: string | null;
+  at: string;
+}
+export interface GameBoardRow {
+  id: string;
+  name: string;
+  points: number;
+  team: string | null;
+  team_id: string | null;
+  color: string | null;
+  shield: boolean;
+  frozen: boolean;
+  me?: boolean;
+  answered?: number;
+  correct?: number;
+}
+export interface GameTeamRow { id: string; name: string; color: string; points: number; mine?: boolean }
+
+export interface GameState {
+  ok: true;
+  server_time: string;
+  session: { id: string; title: string; code: string; status: SessionStatus; mode: 'self'; game: GameSettings; started_at: string | null; ends_at: string | null; winner: { id: string; name: string } | null };
+  me: {
+    id: string; name: string; points: number; rank: number | null; answered: number; total: number; correct: number; streak: number;
+    spins: number; power: GamePower | null; double_next: boolean; shield_until: string | null; frozen_until: string | null; team_id: string | null; finished: boolean;
+  };
+  question: Omit<StudentQuestion, 'status'> & { total: number } | null;
+  board: GameBoardRow[];
+  teams: GameTeamRow[];
+  events: GameEvent[];
+}
+
+export interface GameSubmitResult { status: 'accepted' | 'duplicate'; correct: boolean | null; gain: number; points: number; spin_earned: boolean; won: boolean; correct_text: string | null; explanation: string | null }
+export interface GameRollResult { number: number; kind: string; amount: number; points: number; spins: number; power: GamePower | null; won: boolean }
+export interface GamePowerResult { result: 'done' | 'blocked'; amount?: number; blocked?: number; points?: number; won?: boolean }

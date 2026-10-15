@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { CheckCircle2, CloudOff, Coffee, Loader2, PartyPopper, Star, XCircle } from 'lucide-react';
 import { Logo, Credit } from '@/components/Logo';
@@ -8,6 +8,9 @@ import { AnswerInput, answerComplete, emptyAnswer } from '@/components/AnswerInp
 import { Countdown, Hint, QuestionImage, QuestionText, Stimulus, useTick } from '@/components/QuestionView';
 import { participantStore, useStudent } from '@/hooks/useStudent';
 import { gameLabel } from '@/lib/constants';
+import { sfx } from '@/lib/sound';
+import SoundToggle from '@/components/SoundToggle';
+import GamePlay from './GamePlay';
 import type { Answer } from '@/lib/types';
 
 export default function Play() {
@@ -32,7 +35,18 @@ export default function Play() {
     }
   }, [q, draftKey, resetSubmit]);
 
+  // صوت عند تأكيد استلام الإجابة، وعند كشف الإجابة الصحيحة أو الخاطئة (مرة واحدة لكل سؤال)
+  const played = useRef(new Set<string>());
+  useEffect(() => { if (submit.kind === 'done' && submit.status !== 'duplicate') sfx.sent(); }, [submit]);
+  useEffect(() => {
+    if (!q?.revealed || !q.my_response || played.current.has(q.sq_id)) return;
+    played.current.add(q.sq_id);
+    if (q.my_response.is_correct === true) sfx.correct();
+    else if (q.my_response.is_correct === false) sfx.wrong();
+  }, [q]);
+
   if (!stored) return <Navigate to="/join" replace />;
+  if (state?.session.mode === 'self') return <GamePlay p={stored} />;
 
   if (fatal) {
     return (
@@ -61,6 +75,7 @@ export default function Play() {
       </div>
       <div className="flex items-center gap-2">
         {state.session.leaderboard_enabled && state.me.points != null && <Badge tone="gold"><Star className="h-3.5 w-3.5" />{Number(state.me.points)} نقطة</Badge>}
+        <SoundToggle className="text-white" />
         <span className={cx('h-2.5 w-2.5 rounded-full', transient ? 'bg-amber-400' : live ? 'animate-pulseDot bg-green-400' : 'bg-brand-300')} title={live ? 'متصل لحظيًا' : 'تحديث دوري'} />
       </div>
     </div>

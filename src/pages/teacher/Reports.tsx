@@ -69,7 +69,7 @@ export default function Reports() {
           {filtered.map((s) => {
             const sum = summaries.get(s.id);
             return (
-              <Link key={s.id} to={s.status === 'ended' ? `/t/reports/${s.id}` : `/t/live/${s.id}`}>
+              <Link key={s.id} to={s.status === 'ended' ? `/t/reports/${s.id}` : s.mode === 'self' ? `/t/challenge/${s.id}` : `/t/live/${s.id}`}>
                 <Card className="flex flex-wrap items-center justify-between gap-3 p-3 transition hover:border-brand-300 sm:p-4">
                   <div>
                     <div className="flex items-center gap-2 font-bold">{s.status !== 'ended' && <Radio className="h-4 w-4 text-green-600" />}{s.title}</div>

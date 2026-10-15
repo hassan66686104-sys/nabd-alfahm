@@ -3,7 +3,7 @@ import { uuid } from './uuid';
 import { supabase, isConfigured } from './supabase';
 import { AppError, toAppError } from './errors';
 import type {
-  Answer, ClassGroup, Participant, Profile, Question, Report, ResponseRow, Session, SessionQuestion, Snapshot, StudentState, Subject, Team, TeacherSettings,
+  Answer, ClassGroup, GameEvent, GamePowerResult, GameRollResult, GameSettings, GameState, GameSubmitResult, Participant, Profile, Question, Report, ResponseRow, Session, SessionQuestion, Snapshot, StudentState, Subject, Team, TeacherSettings,
 } from './types';
 import type { QuestionInput } from './schemas';
 import type { SessionSummary } from './stats';
@@ -162,6 +162,8 @@ export interface NewSessionInput {
   teams_enabled: boolean;
   auto_approve_open: boolean;
   is_quick?: boolean;
+  mode?: 'live' | 'self';
+  game?: GameSettings;
 }
 export interface QueueItemInput {
   question_id: string;
@@ -269,3 +271,30 @@ export const student = {
   submit: (participantId: string, token: string, sqId: string, answer: Answer, requestId: string) =>
     run(supabase.rpc('submit_response', { p_participant: participantId, p_token: token, p_sq: sqId, p_answer: answer, p_client_request_id: requestId })) as Promise<StudentResult<{ status: 'accepted' | 'duplicate' | 'updated'; submitted_at?: string }>>,
 };
+
+// ---------- «تحدي الكأس» ----------
+export interface GamePlayerRow {
+  participant_id: string; points: number; answered: number; correct: number; best_streak: number;
+  shield_until: string | null; frozen_until: string | null; updated_at: string;
+}
+export interface GameEventRow { id: number; kind: string; actor_id: string | null; target_id: string | null; team_id: string | null; amount: number; created_at: string }
+
+export const game = {
+  // الطالب
+  state: (participantId: string, token: string) =>
+    run(supabase.rpc('game_state', { p_participant: participantId, p_token: token })) as Promise<GameState | { ok: false; error: string }>,
+  submit: (participantId: string, token: string, sqId: string, answer: Answer, requestId: string) =>
+    run(supabase.rpc('game_submit', { p_participant: participantId, p_token: token, p_sq: sqId, p_answer: answer, p_client_request_id: requestId })) as Promise<StudentResult<GameSubmitResult>>,
+  roll: (participantId: string, token: string) =>
+    run(supabase.rpc('game_roll', { p_participant: participantId, p_token: token })) as Promise<StudentResult<GameRollResult>>,
+  usePower: (participantId: string, token: string, target: string | null, team: string | null) =>
+    run(supabase.rpc('game_use_power', { p_participant: participantId, p_token: token, p_target: target, p_team: team })) as Promise<StudentResult<GamePowerResult>>,
+  // المعلم
+  start: (sessionId: string) => run(supabase.rpc('game_start', { p_session: sessionId })),
+  end: (sessionId: string) => run(supabase.rpc('game_end', { p_session: sessionId })),
+  players: (sessionId: string) =>
+    run(supabase.from('game_players').select('participant_id,points,answered,correct,best_streak,shield_until,frozen_until,updated_at').eq('session_id', sessionId)) as Promise<GamePlayerRow[]>,
+  events: (sessionId: string, limit = 12) =>
+    run(supabase.from('game_events').select('id,kind,actor_id,target_id,team_id,amount,created_at').eq('session_id', sessionId).order('id', { ascending: false }).limit(limit)) as Promise<GameEventRow[]>,
+};
+export type { GameEvent };

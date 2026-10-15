@@ -1,3 +1,4 @@
+import { LUCK, eventText, formatClock, goalText, luckTable } from './game';
 import { describe, expect, it } from 'vitest';
 import { unzipSync, strFromU8 } from 'fflate';
 import { normalizeAr, wordFrequencies, countBlanks, groupAnswers } from './text';
@@ -184,5 +185,29 @@ describe('الأسئلة الفورية (سؤال رأي)', () => {
     expect(suggestActions(st, poll).join(' ')).toContain('سؤال رأي');
     const sum = summarizeSession({ id: 's', title: 'فوري', status: 'ended' } as Session, [poll], ps, rs, [], T);
     expect(sum.students.every((s) => s.pending === 0)).toBe(true);
+  });
+});
+
+describe('تحدي الكأس', () => {
+  it('نصوص الأحداث بلا كلمة سرقة', () => {
+    const kinds = ['streak', 'roll_treasure', 'roll_big_treasure', 'roll_double', 'roll_take', 'roll_shield', 'roll_freeze', 'roll_raid', 'roll_bomb', 'take', 'freeze', 'blocked_take', 'blocked_freeze', 'raid', 'bomb', 'trophy'];
+    for (const kind of kinds) {
+      const t = eventText({ kind, amount: 10, actor: 'سارة', target: 'خالد', team: 'النجوم' });
+      expect(t).not.toMatch(/سرق/);
+      expect(t.length).toBeGreaterThan(5);
+    }
+    expect(eventText({ kind: 'take', amount: 10, actor: 'سارة', target: 'خالد', team: null })).toBe('🤝 سارة أخذ 10 نقاط من خالد');
+    for (const v of Object.values(LUCK)) expect(v.title + v.text).not.toMatch(/سرق/);
+  });
+  it('جدول رقم الحظ يتغير مع المجموعات', () => {
+    expect(luckTable(false).map((x) => x.info.title)).toEqual(['كنز صغير', 'مضاعف النقاط', 'خذ نقاطًا من زميل', 'درع الحماية', 'تجميد زميل', 'كنز كبير']);
+    expect(luckTable(true)[4].info.title).toBe('انتزاع من مجموعة');
+    expect(luckTable(true)[5].info.title).toBe('قصف مجموعة');
+  });
+  it('الهدف والوقت', () => {
+    expect(goalText({ end: 'target', target: 150 })).toContain('150');
+    expect(goalText({ end: 'time', minutes: 5 })).toContain('5 دقائق');
+    expect(formatClock(65_000)).toBe('1:05');
+    expect(formatClock(-5)).toBe('0:00');
   });
 });

@@ -17,6 +17,8 @@ const ImportQuestions = lazy(() => import('./pages/teacher/ImportQuestions'));
 const NewSession = lazy(() => import('./pages/teacher/NewSession'));
 const QuickCheck = lazy(() => import('./pages/teacher/QuickCheck'));
 const Instant = lazy(() => import('./pages/teacher/Instant'));
+const NewChallenge = lazy(() => import('./pages/teacher/NewChallenge'));
+const ChallengeLive = lazy(() => import('./pages/teacher/ChallengeLive'));
 const LiveSession = lazy(() => import('./pages/teacher/LiveSession'));
 const Present = lazy(() => import('./pages/teacher/Present'));
 const Reports = lazy(() => import('./pages/teacher/Reports'));
@@ -59,6 +61,8 @@ export default function App() {
           <Route path="sessions/new" element={<NewSession />} />
           <Route path="quick" element={<QuickCheck />} />
           <Route path="instant" element={<Instant />} />
+          <Route path="challenge/new" element={<NewChallenge />} />
+          <Route path="challenge/:id" element={<ChallengeLive />} />
           <Route path="live/:id" element={<LiveSession />} />
           <Route path="reports" element={<Reports />} />
           <Route path="reports/:id" element={<ReportDetail />} />

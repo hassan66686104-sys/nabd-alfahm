@@ -39,9 +39,11 @@ export function useStudent(p: StoredParticipant | null) {
   const inflight = useRef(false);
   const again = useRef(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  // في «تحدي الكأس» تتولى صفحة اللعبة التحديث، فيتوقف هذا الاستطلاع
+  const selfMode = useRef(false);
 
   const refresh = useCallback(async () => {
-    if (!p) return;
+    if (!p || selfMode.current) return;
     if (inflight.current) { again.current = true; return; }
     inflight.current = true;
     const t0 = Date.now();
@@ -51,6 +53,7 @@ export function useStudent(p: StoredParticipant | null) {
         setFatal(messageFor(r.error));
         if (r.error === 'INVALID_PARTICIPANT' || r.error === 'REMOVED') participantStore.clear();
       } else {
+        if (r.session.mode === 'self') selfMode.current = true;
         setState(r);
         setTransient(null);
         setClockOffset(new Date(r.server_time).getTime() + (Date.now() - t0) / 2 - Date.now());
@@ -80,14 +83,14 @@ export function useStudent(p: StoredParticipant | null) {
 
   // استطلاع احتياطي: سريع عند غياب القناة، وبطيء للتأكد عند وجودها
   useEffect(() => {
-    if (!p || fatal) return;
+    if (!p || fatal || state?.session.mode === 'self') return;
     const id = setInterval(() => { if (navigator.onLine) void refresh(); }, live ? 8000 : 2500);
     const wake = () => void refresh();
     const vis = () => { if (document.visibilityState === 'visible') void refresh(); };
     window.addEventListener('online', wake);
     document.addEventListener('visibilitychange', vis);
     return () => { clearInterval(id); window.removeEventListener('online', wake); document.removeEventListener('visibilitychange', vis); };
-  }, [p, live, fatal, refresh]);
+  }, [p, live, fatal, refresh, state?.session.mode]);
 
   const send = useCallback(async (pending: Pending) => {
     if (!p) return;

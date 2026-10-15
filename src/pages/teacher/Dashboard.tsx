@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BarChart3, FileUp, Heart, MessageCircleQuestion, ThumbsUp, ThumbsDown, LibraryBig, PlayCircle, Search, Settings, Users, Zap, CalendarClock, HelpCircle, Radio } from 'lucide-react';
+import { BarChart3, FileUp, Heart, MessageCircleQuestion, ThumbsUp, ThumbsDown, LibraryBig, PlayCircle, Search, Settings, Users, Zap, CalendarClock, HelpCircle, Radio, Trophy } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, ErrorBox, Input, PageHeader, Spinner, StatCard } from '@/components/ui';
 import { dashboardCounts, listQuestions, listSessions } from '@/lib/api';
 import { toAppError } from '@/lib/errors';
@@ -49,6 +49,7 @@ export default function Dashboard() {
   const tiles = [
     { to: '/t/sessions/new', label: 'ابدأ حصة جديدة', icon: PlayCircle, primary: true },
     { to: '/t/instant', label: 'الأسئلة الفورية', icon: MessageCircleQuestion, gold: true },
+    { to: '/t/challenge/new', label: 'تحدي الكأس', icon: Trophy, gold: true },
     { to: '/t/quick', label: 'اختبر فهمهم الآن', icon: Zap },
     { to: '/t/bank', label: 'بنك الأسئلة', icon: LibraryBig },
     { to: '/t/bank?fav=1', label: 'الأسئلة المفضلة', icon: Heart },
@@ -72,13 +73,24 @@ export default function Dashboard() {
         <span className="flex items-center gap-2 rounded-xl bg-gold-400 px-5 py-3 text-lg font-extrabold text-brand-900"><ThumbsUp className="h-5 w-5" /><ThumbsDown className="h-5 w-5" /> ابدأ</span>
       </Link>
 
+      <Link to="/t/challenge/new" className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gradient-to-l from-gold-400 to-gold-200 p-5 text-brand-900 shadow-card transition hover:-translate-y-0.5" data-testid="challenge-banner">
+        <div className="flex items-center gap-4">
+          <div className="rounded-2xl bg-white/50 p-3"><Trophy className="h-9 w-9 text-brand-800" /></div>
+          <div>
+            <div className="text-2xl font-extrabold">تحدي الكأس</div>
+            <div>مسابقة يلعبها الطلاب وحدهم: نقاط، رقم حظ، دروع، وقصف المجموعات، والفائز يأخذ الكأس.</div>
+          </div>
+        </div>
+        <span className="rounded-xl bg-brand-800 px-5 py-3 text-lg font-extrabold text-white">أنشئ تحديًا</span>
+      </Link>
+
       <div className="relative">
         <Search className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ابحث عن سؤال أو درس أو حصة محفوظة…" className="h-12 pr-10 text-lg" aria-label="بحث سريع" />
         {(found || foundSessions.length > 0) && (
           <Card className="absolute inset-x-0 top-14 z-20 max-h-96 space-y-1 overflow-y-auto p-2">
             {foundSessions.map((s) => (
-              <Link key={s.id} to={s.status === 'ended' ? `/t/reports/${s.id}` : `/t/live/${s.id}`} className="flex items-center justify-between rounded-xl p-2 hover:bg-brand-50">
+              <Link key={s.id} to={s.status === 'ended' ? `/t/reports/${s.id}` : s.mode === 'self' ? `/t/challenge/${s.id}` : `/t/live/${s.id}`} className="flex items-center justify-between rounded-xl p-2 hover:bg-brand-50">
                 <span><CalendarClock className="ms-1 inline h-4 w-4" /> {s.title}</span><Badge tone={STATUS[s.status].tone}>{STATUS[s.status].label}</Badge>
               </Link>
             ))}
@@ -124,6 +136,7 @@ export default function Dashboard() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 font-bold">
                     {s.status === 'live' && <Radio className="h-4 w-4 animate-pulseDot text-green-600" />}
+                    {s.mode === 'self' && <Trophy className="h-4 w-4 shrink-0 text-gold-500" />}
                     <span className="truncate">{s.title}</span>
                   </div>
                   <div className="text-sm text-brand-600">{formatDate(s.started_at ?? s.created_at)}{s.lesson && ` · ${s.lesson}`} · الرمز <span dir="ltr" className="font-mono">{s.code}</span></div>
@@ -132,7 +145,7 @@ export default function Dashboard() {
                   <Badge tone={STATUS[s.status].tone}>{STATUS[s.status].label}</Badge>
                   {s.status === 'ended'
                     ? <Button size="sm" variant="outline" onClick={() => nav(`/t/reports/${s.id}`)}>التقرير</Button>
-                    : <Button size="sm" onClick={() => nav(`/t/live/${s.id}`)}>متابعة الحصة</Button>}
+                    : <Button size="sm" onClick={() => nav(s.mode === 'self' ? `/t/challenge/${s.id}` : `/t/live/${s.id}`)}>{s.mode === 'self' ? 'متابعة التحدي' : 'متابعة الحصة'}</Button>}
                 </div>
               </Card>
             ))}
