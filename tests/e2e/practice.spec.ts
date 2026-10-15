@@ -32,11 +32,12 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'ar' });
   const t = await ctx.newPage();
   await t.goto('/signup');
-  await t.getByLabel('الاسم').fill('أ. الحسن');
+  const tname = `أ. الحسن ${Date.now() % 100000}`;
+  await t.getByLabel('الاسم').fill(tname);
   await t.getByLabel('البريد الإلكتروني').fill(`practice${Date.now()}@test.local`);
   await t.getByLabel('كلمة المرور').fill('Passw0rd!x');
   await t.getByRole('button', { name: 'إنشاء الحساب' }).click();
-  await expect(t.getByText('أهلًا أ. الحسن')).toBeVisible();
+  await expect(t.getByText(`أهلًا ${tname}`)).toBeVisible();
   await t.goto('/t/import');
   await t.getByPlaceholder('أو الصق محتوى CSV أو JSON هنا').fill(CSV);
   await t.getByRole('button', { name: 'تحليل النص الملصق' }).click();
@@ -50,18 +51,22 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   expect(code).toMatch(/^[A-Z2-9]{6}$/);
   await shot(t, '40-practice-teacher-link');
 
-  // طالب يلعب وحده: من الصفحة الرئيسية يكتب الرمز ويختار الدرس
+  await expect(t.getByRole('switch', { name: /بدون رمز/ })).toBeChecked();
+
+  // طالب يلعب وحده بدون أي رمز: من الصفحة الرئيسية يضغط على الدرس فيبدأ التحدي فورًا
   // الطالب الأول على لابتوب: الصفحات تملأ عرض الشاشة
   const solo = await (await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'ar' })).newPage();
   await solo.goto('/');
   await solo.getByTestId('landing-practice').click();
-  await solo.getByLabel('رمز التحديات').fill(code);
-  await solo.getByRole('button', { name: 'متابعة' }).click();
-  await expect(solo.getByText('تحديات أ. الحسن')).toBeVisible();
-  await solo.getByLabel('اسمك').fill('سلمى');
-  await solo.getByRole('radio', { name: /الأخلاق/ }).click();
+  // إن وُجد أكثر من معلم أتاح تحدياته يختار الطالب معلمه أولًا
+  const mine = solo.getByRole('button', { name: tname });
+  await expect(solo.getByText(`تحديات ${tname}`).or(mine)).toBeVisible();
+  if (await mine.isVisible()) await mine.click();
+  await expect(solo.getByText(`تحديات ${tname}`)).toBeVisible();
+  await expect(solo.getByLabel('رمز التحديات')).toHaveCount(0);
+  await solo.getByLabel('اسمك (اختياري)').fill('سلمى');
   await shot(solo, '41-practice-lessons');
-  await solo.getByRole('button', { name: 'العب وحدك' }).click();
+  await solo.getByTestId('lesson').filter({ hasText: 'الأخلاق' }).click();
   await expect(solo.getByText('السؤال 1 من 4')).toBeVisible();
   const card = await solo.getByTestId('game-question').boundingBox();
   expect(card!.width).toBeGreaterThan(800);
@@ -73,14 +78,14 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   // طالبة تنشئ غرفة، وزميلتها المتصلة تراها في القائمة وتنضم
   const host = await phone(browser);
   await host.goto(`/practice/${code}`);
-  await host.getByLabel('اسمك').fill('ليان');
-  await host.getByRole('radio', { name: /الأخلاق/ }).click();
-  await host.getByRole('button', { name: 'تحدَّ زملاءك' }).click();
+  await host.getByLabel('اسمك (اختياري)').fill('ليان');
+  await host.getByRole('radio', { name: 'مع زملائي' }).click();
+  await host.getByTestId('lesson').filter({ hasText: 'الأخلاق' }).click();
   await expect(host.getByTestId('room-code')).toBeVisible();
 
   const friend = await phone(browser);
   await friend.goto(`/practice/${code}`);
-  await friend.getByLabel('اسمك').fill('ريم');
+  await friend.getByLabel('اسمك (اختياري)').fill('ريم');
   await expect(friend.getByText('ليان · الأخلاق')).toBeVisible();
   await friend.getByRole('button', { name: 'انضم' }).click();
   await expect(friend.getByText('بانتظار ليان ليبدأ التحدي')).toBeVisible();

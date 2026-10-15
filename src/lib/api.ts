@@ -316,16 +316,21 @@ export const game = {
 export type { GameEvent };
 
 // ---------- التحدي الذاتي: الطالب يختار الدرس ويبدأ بنفسه ----------
-export interface PracticeLink { owner_id: string; code: string; enabled: boolean }
+export interface PracticeLink { owner_id: string; code: string; enabled: boolean; is_public: boolean }
+export interface PublicPractice { code: string; teacher: string }
 export interface PracticePreview { teacher: string; lessons: { lesson: string; count: number }[]; rooms: { code: string; lesson: string; host: string | null; players: number }[] }
 type JoinResult = { participant_id: string; token: string; session_id: string; code: string; alias: string; display_name: string };
 
+const LINK_COLS = 'owner_id,code,enabled,is_public';
+
 export const practice = {
   // المعلم
-  myLink: () => run(supabase.from('practice_links').select('owner_id,code,enabled').maybeSingle()) as Promise<PracticeLink | null>,
-  createLink: () => run(supabase.from('practice_links').insert({}).select('owner_id,code,enabled').single()) as Promise<PracticeLink>,
-  setEnabled: (ownerId: string, enabled: boolean) => run(supabase.from('practice_links').update({ enabled }).eq('owner_id', ownerId).select('owner_id,code,enabled').single()) as Promise<PracticeLink>,
+  myLink: () => run(supabase.from('practice_links').select(LINK_COLS).maybeSingle()) as Promise<PracticeLink | null>,
+  createLink: () => run(supabase.from('practice_links').insert({ is_public: true }).select(LINK_COLS).single()) as Promise<PracticeLink>,
+  setEnabled: (ownerId: string, enabled: boolean) => run(supabase.from('practice_links').update({ enabled }).eq('owner_id', ownerId).select(LINK_COLS).single()) as Promise<PracticeLink>,
+  setPublic: (ownerId: string, isPublic: boolean) => run(supabase.from('practice_links').update({ is_public: isPublic }).eq('owner_id', ownerId).select(LINK_COLS).single()) as Promise<PracticeLink>,
   // الطالب
+  publicList: () => run(supabase.rpc('practice_public')) as Promise<PublicPractice[]>,
   lookup: (code: string) => run(supabase.rpc('practice_lookup', { p_code: code })) as Promise<StudentResult<PracticePreview>>,
   start: (code: string, lesson: string, name: string, withFriends: boolean) =>
     run(supabase.rpc('practice_start', { p_code: code, p_lesson: lesson, p_name: name, p_with_friends: withFriends })) as Promise<StudentResult<JoinResult>>,

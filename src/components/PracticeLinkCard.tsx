@@ -43,7 +43,8 @@ export default function PracticeLinkCard() {
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? 'تم النسخ' : 'نسخ الرابط'}
             </button>
           </div>
-          <div className="min-w-[220px] flex-1"><Toggle checked={link.enabled} disabled={busy} onChange={(v) => act(() => practice.setEnabled(link.owner_id, v))} label="السماح للطلاب بالتحدي الآن" hint="أوقفه وقت الاختبارات مثلًا" /></div>
+          <div className="min-w-[220px] flex-1"><Toggle checked={link.enabled} disabled={busy} onChange={(v) => act(() => practice.setEnabled(link.owner_id, v))} label="السماح للطلاب بالتحدي الآن" hint="أوقفه وقت الاختبارات مثلًا" />
+            <Toggle checked={link.is_public} disabled={busy || !link.enabled} onChange={(v) => act(() => practice.setPublic(link.owner_id, v))} label="بدون رمز: لكل من يدخل الموقع" hint="يضغط الطالب «تحدي الكأس» في الصفحة الرئيسية، فيرى دروسك ويبدأ مباشرة" /></div>
         </div>
       )}
       {error && <p className="text-sm text-red-700">{error}</p>}

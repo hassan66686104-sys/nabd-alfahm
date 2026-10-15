@@ -31,7 +31,7 @@ export default function Landing() {
               <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="رمز الحصة" dir="ltr" className="text-center text-2xl font-bold uppercase tracking-[.3em]" maxLength={8} aria-label="رمز الحصة" />
               <Button type="submit" size="lg" disabled={code.trim().length < 6}>انضم</Button>
             </form>
-            <Button variant="gold" onClick={() => nav('/practice')} data-testid="landing-practice">🏆 تحدي الكأس: اختر درسًا والعب بنفسك</Button>
+            <Button variant="gold" onClick={() => nav('/practice')} data-testid="landing-practice">🏆 تحدي الكأس: اختر درسًا وابدأ فورًا</Button>
             {resume && <Button variant="soft" onClick={() => nav('/play')}>العودة إلى حصتك الحالية ({resume.display_name})</Button>}
           </Card>
           <Card className="flex flex-col gap-4 p-6">

@@ -597,6 +597,16 @@ test('التحدي الذاتي: الطالب يختار الدرس ويبدأ �
   // إيقاف الرابط يمنع الطلاب
   await A('update practice_links set enabled=false');
   assert.equal((await anon('select public.practice_lookup($1) as r', [link.code], '10.9.0.4')).rows[0].r.error, 'INVALID_CODE');
+
+  // بدون رمز: لا يظهر المعلم للزوار إلا إذا جعل تحدياته عامة ومفعّلة
+  const pub = async () => (await anon('select public.practice_public() as r')).rows[0].r;
+  assert.deepEqual(await pub(), []);
+  await A('update practice_links set enabled=true, is_public=true');
+  assert.deepEqual(await pub(), [{ code: link.code, teacher: 'معلم أ' }]);
+  await A('update practice_links set enabled=false');
+  assert.deepEqual(await pub(), []);
+  await A('update practice_links set enabled=true, is_public=false');
+  assert.deepEqual(await pub(), []);
 });
 
 test('حذف الحساب: المعلم يحذف حسابه فقط مع كل بياناته، وبعد تأكيد صريح', async () => {
