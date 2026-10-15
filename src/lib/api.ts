@@ -3,7 +3,7 @@ import { uuid } from './uuid';
 import { supabase, isConfigured } from './supabase';
 import { AppError, toAppError } from './errors';
 import type {
-  Answer, ClassGroup, Participant, Profile, Question, Report, ResponseRow, Session, SessionQuestion, StudentState, Subject, Team, TeacherSettings,
+  Answer, ClassGroup, Participant, Profile, Question, Report, ResponseRow, Session, SessionQuestion, Snapshot, StudentState, Subject, Team, TeacherSettings,
 } from './types';
 import type { QuestionInput } from './schemas';
 import type { SessionSummary } from './stats';
@@ -206,6 +206,9 @@ export const listSessionQuestions = (sessionId: string) =>
   run(supabase.from('session_questions').select('*').eq('session_id', sessionId).order('position')) as Promise<SessionQuestion[]>;
 export const addSessionQuestion = (sessionId: string, questionId: string, extra: Partial<SessionQuestion> = {}) =>
   run(supabase.from('session_questions').insert({ session_id: sessionId, question_id: questionId, ...extra }).select().single()) as Promise<SessionQuestion>;
+// سؤال فوري يُكتب مباشرة في الحصة دون حفظه في بنك الأسئلة
+export const addInstantQuestion = (sessionId: string, snapshot: Snapshot) =>
+  run(supabase.from('session_questions').insert({ session_id: sessionId, question_id: null, snapshot, points: 1, time_limit_seconds: null }).select().single()) as Promise<SessionQuestion>;
 export const updateSessionQuestion = (id: string, patch: Partial<SessionQuestion>) =>
   run(supabase.from('session_questions').update(patch).eq('id', id));
 export const removeSessionQuestion = (id: string) => run(supabase.from('session_questions').delete().eq('id', id).eq('status', 'draft'));

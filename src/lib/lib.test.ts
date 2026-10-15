@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { unzipSync, strFromU8 } from 'fflate';
 import { normalizeAr, wordFrequencies, countBlanks, groupAnswers } from './text';
-import { computeQuestionStats, levelFor, summarizeSession, computeLeaderboard, suggestActions } from './stats';
+import { computeQuestionStats, levelFor, summarizeSession, computeLeaderboard, suggestActions, isPoll } from './stats';
 import { toCsv, toXlsx, reportSheets } from './export';
 import { parseCsv, parseImport, SAMPLE_CSV } from './importer';
 import { questionSchema, optionsProblem, settingsSchema, joinSchema } from './schemas';
@@ -166,5 +166,23 @@ describe('التحقق والاستيراد', () => {
   it('الإعدادات ورمز الدخول', () => {
     expect(settingsSchema.safeParse({ mastery: 70, reinforce: 80, default_time: 30, hide_names: false, anonymous: false }).success).toBe(false);
     expect(joinSchema.parse({ code: ' ab-c ١٢٣ ' }).code).toBe('ABC123');
+  });
+});
+
+describe('الأسئلة الفورية (سؤال رأي)', () => {
+  it('سؤال الرأي لا يدخل في نسب الصحة ولا يُعد بانتظار التصحيح', () => {
+    const base = sq('p');
+    const poll = sq('p', { snapshot: { ...base.snapshot, type: 'true_false', answer_key: { poll: true }, options: base.snapshot.options.slice(0, 2).map((o) => ({ ...o, is_correct: false })) } });
+    expect(isPoll(poll)).toBe(true);
+    const ps = ['1', '2', '3'].map((x) => part(x));
+    const rs = [resp('p', '1', 'a', null), resp('p', '2', 'a', null), resp('p', '3', 'b', null)];
+    const st = computeQuestionStats(poll, ps, rs, T);
+    expect(st.pending).toBe(0);
+    expect(st.correctPct).toBeNull();
+    expect(st.distribution.map((d) => [d.count, d.isCorrect])).toEqual([[2, null], [1, null]]);
+    expect(st.commonWrong).toBeNull();
+    expect(suggestActions(st, poll).join(' ')).toContain('سؤال رأي');
+    const sum = summarizeSession({ id: 's', title: 'فوري', status: 'ended' } as Session, [poll], ps, rs, [], T);
+    expect(sum.students.every((s) => s.pending === 0)).toBe(true);
   });
 });

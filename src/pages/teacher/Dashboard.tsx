@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BarChart3, FileUp, Heart, LibraryBig, PlayCircle, Search, Settings, Users, Zap, CalendarClock, HelpCircle, Radio } from 'lucide-react';
+import { BarChart3, FileUp, Heart, MessageCircleQuestion, ThumbsUp, ThumbsDown, LibraryBig, PlayCircle, Search, Settings, Users, Zap, CalendarClock, HelpCircle, Radio } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, ErrorBox, Input, PageHeader, Spinner, StatCard } from '@/components/ui';
 import { dashboardCounts, listQuestions, listSessions } from '@/lib/api';
 import { toAppError } from '@/lib/errors';
@@ -48,7 +48,8 @@ export default function Dashboard() {
 
   const tiles = [
     { to: '/t/sessions/new', label: 'ابدأ حصة جديدة', icon: PlayCircle, primary: true },
-    { to: '/t/quick', label: 'اختبر فهمهم الآن', icon: Zap, gold: true },
+    { to: '/t/instant', label: 'الأسئلة الفورية', icon: MessageCircleQuestion, gold: true },
+    { to: '/t/quick', label: 'اختبر فهمهم الآن', icon: Zap },
     { to: '/t/bank', label: 'بنك الأسئلة', icon: LibraryBig },
     { to: '/t/bank?fav=1', label: 'الأسئلة المفضلة', icon: Heart },
     { to: '/t/reports', label: 'تقاريري', icon: BarChart3 },
@@ -59,6 +60,17 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <PageHeader title={`أهلًا ${profile?.full_name || 'بك'}`} subtitle="ما الذي تريد معرفته عن فهم طلابك اليوم؟" />
+
+      <Link to="/t/instant" className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gradient-to-l from-brand-800 to-brand-600 p-5 text-white shadow-card transition hover:-translate-y-0.5" data-testid="instant-banner">
+        <div className="flex items-center gap-4">
+          <div className="rounded-2xl bg-white/15 p-3"><MessageCircleQuestion className="h-9 w-9 text-gold-300" /></div>
+          <div>
+            <div className="text-2xl font-extrabold">الأسئلة الفورية</div>
+            <div className="text-brand-50">اطرح سؤالًا الآن، ويجيب الطلاب بنعم أو لا، أو صح أو خطأ، وترى النتيجة فورًا.</div>
+          </div>
+        </div>
+        <span className="flex items-center gap-2 rounded-xl bg-gold-400 px-5 py-3 text-lg font-extrabold text-brand-900"><ThumbsUp className="h-5 w-5" /><ThumbsDown className="h-5 w-5" /> ابدأ</span>
+      </Link>
 
       <div className="relative">
         <Search className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />

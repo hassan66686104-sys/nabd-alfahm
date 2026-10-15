@@ -16,6 +16,7 @@ const QuestionEditor = lazy(() => import('./pages/teacher/QuestionEditor'));
 const ImportQuestions = lazy(() => import('./pages/teacher/ImportQuestions'));
 const NewSession = lazy(() => import('./pages/teacher/NewSession'));
 const QuickCheck = lazy(() => import('./pages/teacher/QuickCheck'));
+const Instant = lazy(() => import('./pages/teacher/Instant'));
 const LiveSession = lazy(() => import('./pages/teacher/LiveSession'));
 const Present = lazy(() => import('./pages/teacher/Present'));
 const Reports = lazy(() => import('./pages/teacher/Reports'));
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="import" element={<ImportQuestions />} />
           <Route path="sessions/new" element={<NewSession />} />
           <Route path="quick" element={<QuickCheck />} />
+          <Route path="instant" element={<Instant />} />
           <Route path="live/:id" element={<LiveSession />} />
           <Route path="reports" element={<Reports />} />
           <Route path="reports/:id" element={<ReportDetail />} />

@@ -12,6 +12,7 @@ export type GameMode = 'none' | 'five_seconds' | 'survival' | 'golden' | 'team' 
 export interface AnswerKey {
   accepted?: string[];
   blanks?: string[][];
+  poll?: boolean; // سؤال رأي بلا إجابة صحيحة (الأسئلة الفورية)
 }
 
 export interface QuestionOption {

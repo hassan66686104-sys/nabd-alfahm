@@ -149,6 +149,7 @@ export default function Play() {
             {q.my_response ? (
               q.my_response.is_correct === true ? <Status tone="ok" icon={<CheckCircle2 className="h-6 w-6" />}>إجابتك صحيحة، أحسنت!{q.my_response.score != null && ` (+${Number(q.my_response.score)})`}</Status>
                 : q.my_response.is_correct === false ? <Status tone="bad" icon={<XCircle className="h-6 w-6" />}>إجابتك غير صحيحة هذه المرة. راجع الإجابة الصحيحة الموضحة.</Status>
+                  : q.answer_format === 'single' && !q.correct?.option_ids ? <Status tone="ok" icon={<CheckCircle2 className="h-6 w-6" />}>شكرًا، سُجّلت إجابتك.</Status>
                   : <Status tone="info">إجابتك بانتظار مراجعة المعلم.</Status>
             ) : <Status tone="info">لم تُجب عن هذا السؤال.</Status>}
             {q.my_response?.feedback && <div className="rounded-xl bg-brand-50 p-3">ملاحظة المعلم: {q.my_response.feedback}</div>}

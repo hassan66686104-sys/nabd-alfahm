@@ -13,6 +13,9 @@ export const LEVEL_LABELS: Record<Level, string> = {
   none: 'لا توجد بيانات كافية',
 };
 
+// سؤال رأي (نعم/لا) لا يُصحَّح ولا يدخل في نسب الصحة
+export const isPoll = (sq: Pick<SessionQuestion, 'snapshot'>) => sq.snapshot.answer_key?.poll === true;
+
 export function levelFor(correctPct: number | null, t: Thresholds): Level {
   if (correctPct == null) return 'none';
   if (correctPct >= t.mastery) return 'green';
@@ -60,7 +63,7 @@ export function computeQuestionStats(
   const eligible = Math.max(elig.length, answered);
   const correct = rs.filter((r) => r.is_correct === true).length;
   const incorrect = rs.filter((r) => r.is_correct === false).length;
-  const pending = rs.filter((r) => r.is_correct === null).length;
+  const pending = isPoll(sq) ? 0 : rs.filter((r) => r.is_correct === null).length;
   const graded = correct + incorrect;
   const correctPct = graded > 0 ? (correct / graded) * 100 : null;
   const times = rs.map((r) => r.response_ms).filter((x): x is number => typeof x === 'number');
@@ -74,7 +77,7 @@ export function computeQuestionStats(
       key: o.id,
       label: OPTION_LETTERS[i] ?? String(i + 1),
       text: o.text,
-      isCorrect: o.is_correct,
+      isCorrect: isPoll(sq) ? null : o.is_correct,
       count: rs.filter((r) => (fmt === 'single' ? r.answer.option_id === o.id : r.answer.option_ids?.includes(o.id))).length,
     }));
   } else {
@@ -115,6 +118,7 @@ export function suggestActions(stats: QuestionStats, sq: SessionQuestion): strin
   const fmt = sq.snapshot.answer_format;
   if (stats.answered === 0) return ['لم تصل إجابات بعد. ذكّر الطلاب برمز الحصة أو امنحهم وقتًا إضافيًا.'];
   if (stats.participation < 60) out.push('نسبة المشاركة منخفضة؛ شجّع الطلاب الذين لم يجيبوا قبل الحكم على مستوى الفهم.');
+  if (isPoll(sq)) return [...out, 'سؤال رأي: استخدم توزيع الإجابات لفتح نقاش مع الطلاب.'];
   if (stats.level === 'none') {
     if (fmt === 'open' || stats.pending > 0) out.push('راجع الإجابات المفتوحة واعتمد أبرزها للنقاش الجماعي.');
     return out;
@@ -221,6 +225,7 @@ export function summarizeSession(
   });
   const askedIds = new Set(asked.map((s) => s.id));
   const rs = responses.filter((r) => askedIds.has(r.sq_id));
+  const pollIds = new Set(asked.filter(isPoll).map((s) => s.id));
 
   const students: StudentResult[] = active.map((p) => {
     const mine = rs.filter((r) => r.participant_id === p.id);
@@ -235,7 +240,7 @@ export function summarizeSession(
       team: p.team_id ? teamName.get(p.team_id) ?? null : null,
       answered: mine.length,
       correct, incorrect,
-      pending: mine.filter((r) => r.is_correct === null).length,
+      pending: mine.filter((r) => r.is_correct === null && !pollIds.has(r.sq_id)).length,
       score: Math.round(mine.reduce((a, r) => a + (r.score ?? 0), 0) * 100) / 100,
       correctPct: cp,
       level: levelFor(cp, t),

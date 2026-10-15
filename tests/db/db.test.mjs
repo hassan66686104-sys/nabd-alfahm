@@ -382,3 +382,39 @@ test('حذف السؤال من البنك لا يمس نتائج الحصص ال
   assert.equal(r.t, 'كم عدد أيام الأسبوع؟');
   assert.equal((await A('select count(*)::int c from responses where sq_id=$1', [sqs.qMcq.id])).rows[0].c, 3);
 });
+
+test('الأسئلة الفورية: سؤال رأي (نعم/لا) بلا إجابة صحيحة، وسؤال صح/خطأ مصحح', async () => {
+  const s = await rpc1(A, `insert into sessions(title, is_quick) values ('أسئلة فورية', true) returning *`);
+  const p1 = await join(s.code, 'منى');
+  const p2 = await join(s.code, 'يوسف');
+  const snap = (text, correct, poll) => ({
+    question_id: null, type: 'true_false', answer_format: 'single', text,
+    stimulus_kind: 'none', answer_key: poll ? { poll: true } : {},
+    options: [{ id: randomUUID(), position: 0, text: 'نعم', is_correct: correct === 0 }, { id: randomUUID(), position: 1, text: 'لا', is_correct: correct === 1 }],
+  });
+  // سؤال رأي: لا يُسمح بإجابة صحيحة فيه
+  const bad = await rpc1(A, 'insert into session_questions(session_id, snapshot) values ($1,$2::jsonb) returning *', [s.id, JSON.stringify(snap('هل فهمت؟', 0, true))]);
+  await assert.rejects(A('select public.push_question($1, 0)', [bad.id]), /QUESTION_INCOMPLETE/);
+  const poll = await rpc1(A, 'insert into session_questions(session_id, snapshot) values ($1,$2::jsonb) returning *', [s.id, JSON.stringify(snap('هل فهمت الدرس؟', -1, true))]);
+  await A('select public.push_question($1, 0)', [poll.id]);
+  const st = await state(p1);
+  assert.equal(st.question.text, 'هل فهمت الدرس؟');
+  assert.equal(st.question.closes_at, null);
+  assert.equal((await submit(p1, poll.id, { option_id: poll.snapshot.options[0].id })).ok, true);
+  assert.equal((await submit(p2, poll.id, { option_id: poll.snapshot.options[1].id })).ok, true);
+  const rs = (await A('select is_correct, needs_review, score from responses where sq_id=$1', [poll.id])).rows;
+  assert.equal(rs.length, 2);
+  assert.ok(rs.every((r) => r.is_correct === null && r.needs_review === false && r.score === null), 'سؤال الرأي لا يُصحَّح');
+  await A('select public.reveal_answer($1)', [poll.id]);
+  assert.equal((await state(p1)).question.correct.option_ids, null);
+  // سؤال صح/خطأ مصحح: طرحه يُغلق سؤال الرأي
+  const tf = await rpc1(A, 'insert into session_questions(session_id, snapshot) values ($1,$2::jsonb) returning *', [s.id, JSON.stringify(snap('الشمس نجم', 0, false))]);
+  await A('select public.push_question($1, 0)', [tf.id]);
+  assert.equal((await A('select status from session_questions where id=$1', [poll.id])).rows[0].status, 'closed');
+  await submit(p1, tf.id, { option_id: tf.snapshot.options[0].id });
+  await submit(p2, tf.id, { option_id: tf.snapshot.options[1].id });
+  const graded = (await A('select is_correct from responses where sq_id=$1 order by is_correct desc', [tf.id])).rows.map((r) => r.is_correct);
+  assert.deepEqual(graded, [true, false]);
+  // المعلم ب لا يستطيع إضافة سؤال فوري لحصة غيره
+  await assert.rejects(B('insert into session_questions(session_id, snapshot) values ($1,$2::jsonb)', [s.id, JSON.stringify(snap('x', 0, false))]), /row-level security/);
+});
