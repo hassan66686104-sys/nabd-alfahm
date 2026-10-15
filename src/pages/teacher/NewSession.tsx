@@ -80,7 +80,7 @@ export default function NewSession() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="w-full space-y-4">
       <PageHeader title="حصة جديدة" subtitle="خطوات قليلة: اسم الحصة، الأسئلة، ثم ابدأ" />
       <Card className="space-y-3">
         <h2 className="text-lg font-bold">1. بيانات الحصة</h2>

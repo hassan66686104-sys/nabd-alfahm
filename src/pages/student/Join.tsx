@@ -57,7 +57,7 @@ export default function Join() {
   return (
     <div className="min-h-dvh bg-gradient-to-b from-brand-700 to-brand-900">
       <OfflineBanner />
-      <div className="mx-auto flex max-w-md flex-col gap-5 px-4 py-8">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-8 lg:max-w-2xl">
         <div className="mx-auto rounded-2xl bg-white px-3 py-2"><Brand /></div>
         <Card className="space-y-4 p-6">
           {!preview ? (

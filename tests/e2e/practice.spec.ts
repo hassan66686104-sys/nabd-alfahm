@@ -49,7 +49,8 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   await shot(t, '40-practice-teacher-link');
 
   // طالب يلعب وحده: من الصفحة الرئيسية يكتب الرمز ويختار الدرس
-  const solo = await phone(browser);
+  // الطالب الأول على لابتوب: الصفحات تملأ عرض الشاشة
+  const solo = await (await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'ar' })).newPage();
   await solo.goto('/');
   await solo.getByTestId('landing-practice').click();
   await solo.getByLabel('رمز التحديات').fill(code);
@@ -59,6 +60,10 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   await solo.getByRole('radio', { name: /الأخلاق/ }).click();
   await shot(solo, '41-practice-lessons');
   await solo.getByRole('button', { name: 'العب وحدك' }).click();
+  await expect(solo.getByText('السؤال 1 من 4')).toBeVisible();
+  const card = await solo.getByTestId('game-question').boundingBox();
+  expect(card!.width).toBeGreaterThan(800);
+  await shot(solo, '44-laptop-student-game');
   await answerAll(solo);
   await expect(solo.getByTestId('game-winner')).toHaveText('سلمى', { timeout: 10000 });
   await expect(solo.getByRole('button', { name: 'تحدٍّ جديد' })).toBeVisible();

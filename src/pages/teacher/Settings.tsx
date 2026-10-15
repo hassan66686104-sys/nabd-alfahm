@@ -53,7 +53,7 @@ export default function Settings() {
   const run = async (fn: () => Promise<unknown>, ok: string) => { try { await fn(); toast(ok); loadLists(); } catch (e) { toast(toAppError(e).message, 'error'); } };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="w-full space-y-4">
       <PageHeader title="الإعدادات" />
       <Card className="space-y-3">
         <h2 className="text-lg font-extrabold">الملف الشخصي</h2>

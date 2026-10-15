@@ -83,10 +83,10 @@ export default function Practice() {
   return (
     <div className="min-h-dvh bg-gradient-to-b from-brand-700 to-brand-900">
       <OfflineBanner />
-      <div className="mx-auto flex max-w-lg flex-col gap-4 px-4 py-8">
+      <div className="mx-auto flex w-full max-w-lg flex-col gap-4 px-4 py-8 lg:max-w-none lg:px-8">
         <div className="mx-auto rounded-2xl bg-white px-3 py-2"><Brand /></div>
         {!data ? (
-          <Card className="space-y-4 p-6">
+          <Card className="mx-auto w-full max-w-xl space-y-4 p-6">
             <form className="space-y-4" onSubmit={(e: FormEvent) => { e.preventDefault(); void load(code); }}>
               <h1 className="flex items-center gap-2 text-2xl font-extrabold"><Trophy className="h-7 w-7 text-gold-400" />تحدي الكأس</h1>
               <p className="text-brand-700">اختر درسًا والعب وحدك أو مع زملائك متى شئت.</p>
@@ -99,7 +99,7 @@ export default function Practice() {
             </form>
           </Card>
         ) : (
-          <>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
             <Card className="space-y-4 p-5">
               <div>
                 <div className="text-sm text-brand-600">تحديات {data.teacher}</div>
@@ -109,7 +109,7 @@ export default function Practice() {
               <div>
                 <div className="mb-2 font-semibold text-brand-800">اختر الدرس</div>
                 {data.lessons.length === 0 ? <p className="rounded-xl bg-ivory-100 p-3 text-brand-700">لا توجد دروس جاهزة بعد. اطلب من معلمك إضافة أسئلة للدروس.</p> : (
-                  <div className="grid gap-2" role="radiogroup" aria-label="الدروس">
+                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" role="radiogroup" aria-label="الدروس">
                     {data.lessons.map((l) => (
                       <button key={l.lesson} type="button" role="radio" aria-checked={lesson === l.lesson} onClick={() => setLesson(l.lesson)}
                         className={cx('flex items-center justify-between rounded-xl border-2 p-3 text-start font-bold', lesson === l.lesson ? 'border-gold-400 bg-gold-50' : 'border-brand-100 hover:border-brand-300')}>
@@ -144,7 +144,7 @@ export default function Practice() {
                 </div>
               ))}
             </Card>
-          </>
+          </div>
         )}
         <Credit light />
       </div>

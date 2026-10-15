@@ -21,7 +21,7 @@ export default function TeacherLayout() {
     <div className="min-h-dvh pb-20 lg:pb-0">
       <OfflineBanner />
       <header className="no-print sticky top-0 z-30 border-b border-brand-100 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4">
+        <div className="flex h-16 w-full items-center justify-between gap-4 px-4 lg:px-8">
           <NavLink to="/t"><Brand compact /></NavLink>
           <nav className="hidden items-center gap-1 lg:flex">
             {NAV.map((n) => (
@@ -39,7 +39,7 @@ export default function TeacherLayout() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-6">
+      <main className="w-full px-4 py-6 lg:px-8">
         <Outlet />
       </main>
       <footer className="no-print pb-24 lg:pb-6"><Credit /></footer>

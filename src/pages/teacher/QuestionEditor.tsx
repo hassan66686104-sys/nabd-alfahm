@@ -17,7 +17,7 @@ export default function QuestionEditor() {
   }, [id]);
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="w-full">
       <PageHeader title={id ? 'تعديل السؤال' : 'سؤال جديد'} subtitle="يُحفظ السؤال في بنكك الدائم ويمكن استخدامه في حصص متعددة" />
       {error ? <ErrorBox error={error} /> : initial === undefined ? <Spinner /> : (
         <QuestionForm key={id ?? 'new'} initial={initial ?? undefined} onSaved={() => nav('/t/bank')} onCancel={() => nav(-1)} />

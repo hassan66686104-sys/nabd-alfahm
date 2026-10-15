@@ -75,7 +75,7 @@ export default function NewChallenge() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
+    <div className="w-full space-y-4">
       <PageHeader title={<span className="flex items-center gap-2"><Trophy className="h-7 w-7 text-gold-400" />تحدي الكأس</span>}
         subtitle="يلعب الطلاب وحدهم: كل طالب ينتقل إلى السؤال التالي فور إجابته، ويجمع النقاط ويرمي رقم الحظ." />
 

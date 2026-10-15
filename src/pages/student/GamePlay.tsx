@@ -247,6 +247,7 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
     return (
       <Shell>
         {header}
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
         <Card className="space-y-4 py-8 text-center">
           <Trophy className="mx-auto h-16 w-16 text-gold-400" />
           <h1 className="text-2xl font-extrabold">استعد لتحدي الكأس!</h1>
@@ -270,6 +271,7 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
           )}
         </Card>
         <Card className="space-y-2"><h2 className="font-bold">المنضمون</h2><Leaderboard rows={gs.board} limit={30} /></Card>
+        </div>
       </Shell>
     );
   }
@@ -280,6 +282,8 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
   return (
     <Shell>
       {header}
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
+      <div className="flex flex-col gap-3">
 
       <div className="grid grid-cols-3 gap-2 text-center text-white">
         <Stat label="نقاطي" value={me.points} />
@@ -352,13 +356,17 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
       ) : <Card className="py-8 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-500" /></Card>}
 
       {transient && <ErrorBox error={transient} />}
+      </div>
 
+      <div className="flex flex-col gap-3 lg:sticky lg:top-4">
       <Card className="space-y-2">
         <h2 className="font-bold">الترتيب</h2>
         <TeamScores teams={gs.teams} />
-        <Leaderboard rows={gs.board} target={target} limit={5} />
+        <Leaderboard rows={gs.board} target={target} limit={8} />
       </Card>
       <Card className="space-y-2 bg-ivory-100"><h2 className="font-bold">ماذا يحدث؟</h2><EventFeed events={gs.events} /></Card>
+      </div>
+      </div>
 
       <Modal open={!!roll} onClose={() => setRoll(null)} title="رقم الحظ"
         footer={<Button onClick={() => { const pw = roll?.power; setRoll(null); if (pw) setPicking(true); }}>{roll?.power ? 'اختر الهدف' : 'رائع!'}</Button>}>
@@ -408,7 +416,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh bg-gradient-to-b from-brand-800 to-brand-900">
       <OfflineBanner extra="أعد المحاولة عند عودة الاتصال." />
-      <div className="mx-auto flex max-w-xl flex-col gap-3 px-3 py-4 sm:px-4">{children}<Credit light className="pt-4" /></div>
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-3 px-3 py-4 sm:px-4 lg:max-w-none lg:px-8">{children}<Credit light className="pt-4" /></div>
     </div>
   );
 }

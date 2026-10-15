@@ -181,7 +181,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh bg-gradient-to-b from-brand-800 to-brand-900">
       <OfflineBanner extra="إجاباتك تُحفظ وتُرسل عند عودة الاتصال." />
-      <div className="mx-auto flex max-w-xl flex-col gap-4 px-3 py-4 sm:px-4">{children}<Credit light className="pt-4" /></div>
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-4 px-3 py-4 sm:px-4 lg:max-w-5xl lg:px-8">{children}<Credit light className="pt-4" /></div>
     </div>
   );
 }

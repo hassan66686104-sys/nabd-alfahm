@@ -83,7 +83,7 @@ function InstantStart({ onStarted }: { onStarted: (id: string) => void }) {
     } catch (e) { setError(toAppError(e).message); } finally { setBusy(false); }
   };
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="w-full space-y-4">
       <PageHeader title={<span className="flex items-center gap-2"><MessageCircleQuestion className="h-8 w-8 text-gold-400" /> الأسئلة الفورية</span>}
         subtitle="اطرح سؤالًا في أي لحظة من الدرس، ويجيب الطلاب من أجهزتهم بنعم أو لا، أو صح أو خطأ." />
       <Card className="space-y-4 p-6 text-center">

@@ -59,7 +59,7 @@ export default function Present() {
           <JoinInfo code={session.code} count={active.length} large />
         </div>
       ) : (
-        <main className="mx-auto max-w-[1600px] space-y-6 px-6 py-6">
+        <main className="w-full space-y-6 px-6 py-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3 text-2xl">
               {sq.game_mode !== 'none' && <span className="rounded-full bg-gold-400 px-5 py-1.5 font-extrabold text-brand-900">{gameLabel(sq.game_mode)}{Number(sq.multiplier) > 1 && ` ×${Number(sq.multiplier)}`}</span>}

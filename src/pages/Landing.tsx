@@ -13,7 +13,7 @@ export default function Landing() {
   const resume = participantStore.get();
   return (
     <div className="min-h-dvh bg-gradient-to-b from-brand-800 via-brand-700 to-ivory">
-      <div className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-8 sm:py-14">
+      <div className="mx-auto flex w-full flex-col gap-8 px-4 py-8 sm:py-14 lg:px-10">
         <div className="flex items-center justify-between">
           <div className="rounded-2xl bg-white/95 px-3 py-2 shadow"><Brand /></div>
           {session && <Button variant="gold" onClick={() => nav('/t')}>لوحة المعلم</Button>}
