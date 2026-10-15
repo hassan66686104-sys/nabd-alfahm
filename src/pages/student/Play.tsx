@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { CheckCircle2, CloudOff, Coffee, Loader2, PartyPopper, Star, XCircle } from 'lucide-react';
-import { Logo } from '@/components/Logo';
+import { Logo, Credit } from '@/components/Logo';
 import { Badge, Button, Card, ErrorBox, cx } from '@/components/ui';
 import { OfflineBanner } from '@/components/feedback';
 import { AnswerInput, answerComplete, emptyAnswer } from '@/components/AnswerInput';
@@ -165,7 +165,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh bg-gradient-to-b from-brand-800 to-brand-900">
       <OfflineBanner extra="إجاباتك تُحفظ وتُرسل عند عودة الاتصال." />
-      <div className="mx-auto flex max-w-xl flex-col gap-4 px-3 py-4 sm:px-4">{children}</div>
+      <div className="mx-auto flex max-w-xl flex-col gap-4 px-3 py-4 sm:px-4">{children}<Credit light className="pt-4" /></div>
     </div>
   );
 }

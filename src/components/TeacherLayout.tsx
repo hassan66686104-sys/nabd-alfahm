@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { BarChart3, Home, LibraryBig, LogOut, Settings, Zap } from 'lucide-react';
-import { Brand } from './Logo';
+import { Brand, Credit } from './Logo';
 import { OfflineBanner } from './feedback';
 import { useAuth } from '@/hooks/useAuth';
 import { auth } from '@/lib/api';
@@ -42,6 +42,7 @@ export default function TeacherLayout() {
       <main className="mx-auto max-w-7xl px-4 py-6">
         <Outlet />
       </main>
+      <footer className="no-print pb-24 lg:pb-6"><Credit /></footer>
       <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-brand-100 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
         {NAV.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.end}

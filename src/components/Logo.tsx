@@ -19,3 +19,10 @@ export function Brand({ compact }: { compact?: boolean }) {
     </div>
   );
 }
+
+// اسم معدّ التطبيق: يظهر في أسفل الصفحات
+export const AUTHOR_CREDIT = 'إعداد الأستاذ الحسن علي';
+
+export function Credit({ light, className = '' }: { light?: boolean; className?: string }) {
+  return <p className={`text-center text-sm font-semibold ${light ? 'text-brand-100' : 'text-brand-600'} ${className}`}>{AUTHOR_CREDIT}</p>;
+}

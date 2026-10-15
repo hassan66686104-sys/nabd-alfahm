@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { Brand } from '@/components/Logo';
+import { Brand, Credit } from '@/components/Logo';
 import { Button, Card, ErrorBox, Field, Input } from '@/components/ui';
 import { useFeedback } from '@/components/feedback';
 import { auth } from '@/lib/api';
@@ -18,6 +18,7 @@ function Shell({ title, children, footer }: { title: string; children: ReactNode
           {children}
         </Card>
         {footer && <div className="text-center text-brand-700">{footer}</div>}
+        <Credit />
       </div>
     </div>
   );

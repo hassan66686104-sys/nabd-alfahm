@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GraduationCap, Presentation, Smartphone, BarChart3, ShieldCheck } from 'lucide-react';
-import { Brand } from '@/components/Logo';
+import { Brand, Credit, AUTHOR_CREDIT } from '@/components/Logo';
 import { Button, Card, Input } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
 import { participantStore } from '@/hooks/useStudent';
@@ -20,6 +20,7 @@ export default function Landing() {
         </div>
         <div className="text-center text-white">
           <h1 className="text-3xl font-extrabold leading-tight sm:text-5xl">بنك الأسئلة التفاعلي الذكي للمعلم</h1>
+          <p className="mt-3 text-lg font-bold text-gold-300">{AUTHOR_CREDIT}</p>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-brand-50 sm:text-xl">اطرح سؤالًا قصيرًا، يجيب الطلاب من أجهزتهم، وترى فورًا مدى فهمهم لتتخذ قرارك التعليمي في الحال.</p>
         </div>
         <div className="grid gap-5 md:grid-cols-2">
@@ -57,6 +58,7 @@ export default function Landing() {
           ))}
         </div>
         <p className="text-center text-sm text-brand-700"><Link to="/join" className="underline">صفحة انضمام الطلاب</Link></p>
+        <Credit className="text-base text-brand-800" />
       </div>
     </div>
   );

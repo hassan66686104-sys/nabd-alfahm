@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Brand } from '@/components/Logo';
+import { Brand, Credit } from '@/components/Logo';
 import { Button, Card, ErrorBox, Field, Input, cx } from '@/components/ui';
 import { OfflineBanner } from '@/components/feedback';
 import { student } from '@/lib/api';
@@ -102,6 +102,7 @@ export default function Join() {
             </form>
           )}
         </Card>
+        <Credit light />
       </div>
     </div>
   );
