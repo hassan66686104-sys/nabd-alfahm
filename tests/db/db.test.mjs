@@ -418,3 +418,121 @@ test('الأسئلة الفورية: سؤال رأي (نعم/لا) بلا إجا
   // المعلم ب لا يستطيع إضافة سؤال فوري لحصة غيره
   await assert.rejects(B('insert into session_questions(session_id, snapshot) values ($1,$2::jsonb)', [s.id, JSON.stringify(snap('x', 0, false))]), /row-level security/);
 });
+
+test('تحدي الكأس: لعب ذاتي، نقاط، رقم الحظ، أخذ النقاط والدرع والتجميد والقصف، والفوز بالكأس', async () => {
+  const s = await rpc1(A, `insert into sessions(title, mode, teams_enabled, game) values ('تحدي الكأس', 'self', true, $1::jsonb) returning *`,
+    [JSON.stringify({ end: 'target', target: 60, powers: true, prize: 'كأس الفصل' })]);
+  const t1 = await rpc1(A, `insert into session_teams(session_id, name, position) values ($1,'الصقور',0) returning *`, [s.id]);
+  const t2 = await rpc1(A, `insert into session_teams(session_id, name, position) values ($1,'النجوم',1) returning *`, [s.id]);
+  const mk = (i) => ({ question_id: null, type: 'true_false', answer_format: 'single', text: `عبارة رقم ${i} صحيحة`, stimulus_kind: 'none', answer_key: {},
+    explanation: 'شرح', options: [{ id: randomUUID(), position: 0, text: 'صح', is_correct: true }, { id: randomUUID(), position: 1, text: 'خطأ', is_correct: false }] });
+  for (let i = 1; i <= 8; i++) await A('insert into session_questions(session_id, snapshot) values ($1,$2::jsonb)', [s.id, JSON.stringify(mk(i))]);
+  const p1 = await join(s.code, 'سارة', t1.id);
+  const p2 = await join(s.code, 'خالد', t2.id);
+  const p3 = await join(s.code, 'ريم', t2.id);
+  const gs = async (p) => (await anon('select public.game_state($1,$2) as r', [p.participant_id, p.token])).rows[0].r;
+  const gsub = async (p, sq, answer) => (await anon('select public.game_submit($1,$2,$3,$4::jsonb,$5) as r', [p.participant_id, p.token, sq, JSON.stringify(answer), randomUUID()])).rows[0].r;
+  const power = async (p, target, team) => (await anon('select public.game_use_power($1,$2,$3,$4) as r', [p.participant_id, p.token, target, team])).rows[0].r;
+  const answerRight = async (p) => {
+    const q = (await gs(p)).question;
+    const sq = (await A('select snapshot from session_questions where id=$1', [q.sq_id])).rows[0].snapshot;
+    return gsub(p, q.sq_id, { option_id: sq.options.find((o) => o.is_correct).id });
+  };
+
+  // قبل البدء: الطالب ينتظر، وواجهة الطالب تعرف أنها تحدٍّ
+  assert.equal((await state(p1)).session.mode, 'self');
+  let g = await gs(p1);
+  assert.equal(g.session.status, 'lobby');
+  assert.equal(g.question, null);
+  // معلم آخر لا يستطيع البدء
+  await assert.rejects(B('select public.game_start($1)', [s.id]), /NOT_FOUND/);
+  await A('select public.game_start($1)', [s.id]);
+
+  g = await gs(p1);
+  assert.equal(g.session.status, 'live');
+  assert.equal(g.question.number, 1);
+  assert.ok(g.question.options.every((o) => !('is_correct' in o)), 'لا تُكشف الإجابة الصحيحة');
+  // إجابة خاطئة: صفر نقاط وتظهر الإجابة الصحيحة فورًا
+  const wrong = await gsub(p1, g.question.sq_id, { option_id: (await A('select snapshot from session_questions where id=$1', [g.question.sq_id])).rows[0].snapshot.options[1].id });
+  assert.equal(wrong.correct, false);
+  assert.equal(wrong.gain, 0);
+  assert.equal(wrong.correct_text, 'صح');
+  assert.equal((await gsub(p1, g.question.sq_id, { option_id: randomUUID() })).error, 'ALREADY_ANSWERED');
+  // ثلاث إجابات صحيحة متتالية تمنح رمية رقم حظ
+  for (let i = 0; i < 3; i++) assert.equal((await answerRight(p1)).gain, 10);
+  g = await gs(p1);
+  assert.equal(g.me.points, 30);
+  assert.equal(g.me.spins, 1);
+  assert.equal(g.me.answered, 4);
+  assert.equal(g.question.number, 5);
+  const roll = (await anon('select public.game_roll($1,$2) as r', [p1.participant_id, p1.token])).rows[0].r;
+  assert.ok(roll.ok && roll.number >= 1 && roll.number <= 6);
+  assert.equal((await anon('select public.game_roll($1,$2) as r', [p1.participant_id, p1.token])).rows[0].r.error, 'NO_SPINS');
+
+  // الطالب لا يرى جداول اللعبة مباشرة
+  await assert.rejects(anon('select * from game_players'), /permission denied/);
+
+  // خذ نقاطًا من زميل
+  await answerRight(p2); await answerRight(p2);
+  await as('postgres', null, `update game_players set power='take', points=30, double_next=false, shield_until=null where participant_id=$1`, [p1.participant_id]);
+  let r = await power(p1, p2.participant_id, null);
+  assert.equal(r.amount, 10);
+  assert.equal((await gs(p2)).me.points, 10);
+  // الدرع يصد المحاولة
+  await as('postgres', null, `update game_players set shield_until=now()+interval '1 minute' where participant_id=$1`, [p2.participant_id]);
+  await as('postgres', null, `update game_players set power='take' where participant_id=$1`, [p1.participant_id]);
+  r = await power(p1, p2.participant_id, null);
+  assert.equal(r.result, 'blocked');
+  assert.equal((await gs(p2)).me.points, 10);
+  // التجميد يمنع الإجابة مؤقتًا
+  await as('postgres', null, `update game_players set power='freeze' where participant_id=$1`, [p1.participant_id]);
+  await power(p1, p3.participant_id, null);
+  const q3 = (await gs(p3)).question;
+  assert.equal((await gsub(p3, q3.sq_id, { option_id: randomUUID() })).error, 'FROZEN');
+  // قصف مجموعة: كل عضو غير محمي يخسر حتى 5 نقاط
+  await as('postgres', null, `update game_players set points=20, frozen_until=null where participant_id=$1`, [p3.participant_id]);
+  await as('postgres', null, `update game_players set power='bomb' where participant_id=$1`, [p1.participant_id]);
+  assert.equal((await power(p1, null, t1.id)).error, 'INVALID_TARGET', 'لا يقصف مجموعته');
+  r = await power(p1, null, t2.id);
+  assert.equal(r.amount, 5);
+  assert.equal(r.blocked, 1);
+  assert.equal((await gs(p3)).me.points, 15);
+  g = await gs(p1);
+  assert.ok(g.events.some((e) => e.kind === 'take' && e.amount === 10));
+  assert.ok(g.board.length === 3 && g.teams.length === 2);
+
+  // بلوغ الهدف يمنح الكأس وينهي التحدي
+  await as('postgres', null, `update game_players set points=55, double_next=false where participant_id=$1`, [p1.participant_id]);
+  const win = await answerRight(p1);
+  assert.equal(win.won, true);
+  g = await gs(p2);
+  assert.equal(g.session.status, 'ended');
+  assert.equal(g.session.winner.id, p1.participant_id);
+  assert.equal((await gsub(p2, q3.sq_id, { option_id: randomUUID() })).error, 'GAME_OVER');
+  // المعلم يرى الترتيب والأحداث، والنتائج محفوظة في التقرير
+  assert.equal((await A('select count(*)::int n from game_players where session_id=$1', [s.id])).rows[0].n, 3);
+  assert.equal((await B('select count(*)::int n from game_players where session_id=$1', [s.id])).rows[0].n, 0);
+  assert.ok((await A('select count(*)::int n from responses where session_id=$1', [s.id])).rows[0].n >= 7);
+});
+
+test('تحدي الكأس بالوقت: ينتهي تلقائيًا عند انتهاء المدة', async () => {
+  const s = await rpc1(A, `insert into sessions(title, mode, game) values ('تحدي بالوقت', 'self', '{"end":"time","minutes":5}') returning *`);
+  await A('insert into session_questions(session_id, snapshot) values ($1,$2::jsonb)', [s.id, JSON.stringify({ question_id: null, type: 'true_false', answer_format: 'single', text: 'سؤال', stimulus_kind: 'none', answer_key: {},
+    options: [{ id: randomUUID(), position: 0, text: 'صح', is_correct: true }, { id: randomUUID(), position: 1, text: 'خطأ', is_correct: false }] })]);
+  const p = await join(s.code, 'هدى');
+  await A('select public.game_start($1)', [s.id]);
+  const q = (await anon('select public.game_state($1,$2) as r', [p.participant_id, p.token])).rows[0].r.question;
+  const snapQ = (await A('select snapshot from session_questions where id=$1', [q.sq_id])).rows[0].snapshot;
+  assert.equal((await anon('select public.game_submit($1,$2,$3,$4::jsonb) as r', [p.participant_id, p.token, q.sq_id, JSON.stringify({ option_id: snapQ.options[0].id })])).rows[0].r.gain, 10);
+  const live = (await A('select ends_at > now() + interval \'4 minutes\' ok from sessions where id=$1', [s.id])).rows[0];
+  assert.equal(live.ok, true);
+  await as('postgres', null, `update sessions set ends_at = now() - interval '1 second' where id=$1`, [s.id]);
+  const g = (await anon('select public.game_state($1,$2) as r', [p.participant_id, p.token])).rows[0].r;
+  assert.equal(g.session.status, 'ended');
+  assert.equal(g.session.winner.id, p.participant_id);
+  // الحصص العادية لا تقبل دوال اللعبة
+  const n = await rpc1(A, `insert into sessions(title) values ('حصة عادية') returning *`);
+  const pn = await join(n.code, 'علي');
+  assert.equal((await anon('select public.game_state($1,$2) as r', [pn.participant_id, pn.token])).rows[0].r.error, 'NOT_A_GAME');
+  assert.equal((await state(pn)).session.mode, 'live');
+});
