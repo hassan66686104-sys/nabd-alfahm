@@ -3,7 +3,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Brand, Credit } from '@/components/Logo';
 import { Button, Card, ErrorBox, Field, Input, cx } from '@/components/ui';
 import { OfflineBanner } from '@/components/feedback';
-import { student } from '@/lib/api';
+import { game, student } from '@/lib/api';
+import { AvatarPicker } from '@/components/Avatar';
+import { FunBackdrop } from '@/components/fun';
+import { saveAvatar, savedAvatar } from '@/lib/avatars';
 import { messageFor, toAppError } from '@/lib/errors';
 import { joinSchema, firstError } from '@/lib/schemas';
 import { participantStore } from '@/hooks/useStudent';
@@ -16,6 +19,7 @@ export default function Join() {
   const [code, setCode] = useState(params.code ?? '');
   const [name, setName] = useState('');
   const [team, setTeam] = useState<string | null>(null);
+  const [avatar, setAvatar] = useState<string>(savedAvatar() ?? 'lion');
   const [preview, setPreview] = useState<Preview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,18 +52,20 @@ export default function Join() {
       const r = await student.join(preview.code, preview.anonymous ? null : name.trim(), team);
       if (!r.ok) return setError(messageFor(r.error));
       participantStore.clear();
-      participantStore.set({ participant_id: r.participant_id, token: r.token, session_id: r.session_id, code: r.code, alias: r.alias, display_name: r.display_name });
+      participantStore.set({ participant_id: r.participant_id, token: r.token, session_id: r.session_id, code: r.code, alias: r.alias, display_name: r.display_name, avatar });
+      saveAvatar(avatar);
+      await game.setAvatar(r.participant_id, r.token, avatar).catch(() => {});
       nav('/play', { replace: true });
     } catch (err) { setError(toAppError(err).message); }
     finally { setBusy(false); }
   };
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-brand-700 to-brand-900">
+    <FunBackdrop>
       <OfflineBanner />
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-8 lg:max-w-2xl">
-        <div className="mx-auto rounded-2xl bg-white px-3 py-2"><Brand /></div>
-        <Card className="space-y-4 p-6">
+        <div className="mx-auto animate-bounceIn rounded-2xl bg-white px-3 py-2 shadow-xl"><Brand /></div>
+        <Card className="animate-bounceIn space-y-4 p-6 shadow-2xl">
           {!preview ? (
             <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void lookup(code); }}>
               <h1 className="text-2xl font-extrabold">الانضمام إلى حصة</h1>
@@ -84,6 +90,7 @@ export default function Join() {
                   <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} autoComplete="name" autoFocus className="text-lg" />
                 </Field>
               )}
+              <AvatarPicker value={avatar} onChange={setAvatar} />
               {preview.teams_enabled && preview.teams.length > 0 && (
                 <div>
                   <div className="mb-2 text-sm font-semibold">اختر فريقك (اختياري)</div>
@@ -105,6 +112,6 @@ export default function Join() {
         </Card>
         <Credit light />
       </div>
-    </div>
+    </FunBackdrop>
   );
 }

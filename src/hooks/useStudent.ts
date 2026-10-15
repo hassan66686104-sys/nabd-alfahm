@@ -10,7 +10,7 @@ import type { Answer, StudentState } from '@/lib/types';
 const KEY = 'nabd.participant';
 const PENDING_KEY = 'nabd.pending';
 
-export interface StoredParticipant { participant_id: string; token: string; session_id: string; code: string; alias: string; display_name: string }
+export interface StoredParticipant { participant_id: string; token: string; session_id: string; code: string; alias: string; display_name: string; avatar?: string }
 
 export const participantStore = {
   get(): StoredParticipant | null {

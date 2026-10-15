@@ -25,8 +25,8 @@
 /* حركات تُستخدم بأسماء مباشرة في style (رموز طائرة وقصاصات الاحتفال) */
 @keyframes floatUp {
   0% { transform: translateY(0) rotate(0deg); opacity: 0; }
-  10% { opacity: .9; }
-  90% { opacity: .9; }
+  10% { opacity: var(--o, .9); }
+  90% { opacity: var(--o, .9); }
   100% { transform: translateY(-115vh) rotate(360deg); opacity: 0; }
 }
 @keyframes confetti {

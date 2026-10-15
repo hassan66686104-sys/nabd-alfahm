@@ -28,6 +28,8 @@ export default function NewChallenge() {
   const [target, setTarget] = useState('100');
   const [minutes, setMinutes] = useState('10');
   const [powers, setPowers] = useState(true);
+  const [heartsOn, setHeartsOn] = useState(true);
+  const [helpsOn, setHelpsOn] = useState(true);
   const [prize, setPrize] = useState('');
   const [teamsOn, setTeamsOn] = useState(false);
   const [teams, setTeams] = useState<string[]>(['المجموعة الأولى', 'المجموعة الثانية']);
@@ -63,7 +65,7 @@ export default function NewChallenge() {
         title: title.trim(), class_id: null, subject_id: items[0]?.subject_id ?? null, grade: items[0]?.grade ?? '', unit: items[0]?.unit ?? '', lesson: lesson || items[0]?.lesson || '',
         anonymous, hide_names: hideNames, hide_results: false, leaderboard_enabled: true, teams_enabled: teamsOn, auto_approve_open: false,
         mode: 'self',
-        game: { end, ...(end === 'target' ? { target: t } : { minutes: m }), powers, ...(prize.trim() ? { prize: prize.trim().slice(0, 80) } : {}) },
+        game: { end, ...(end === 'target' ? { target: t } : { minutes: m }), powers, hearts: heartsOn ? 3 : 0, helps: helpsOn, ...(prize.trim() ? { prize: prize.trim().slice(0, 80) } : {}) },
       }, items.map((q) => ({ question_id: q.id })), teamsOn ? teamNames.map((name, i) => ({ name, color: TEAM_COLORS[i % TEAM_COLORS.length] })) : []);
       toast('تم إنشاء التحدي');
       nav(`/t/challenge/${s.id}`);
@@ -128,7 +130,7 @@ export default function NewChallenge() {
       </Card>
 
       <Card className="space-y-1">
-        <h2 className="text-lg font-bold">3. رقم الحظ والمجموعات</h2>
+        <h2 className="text-lg font-bold">3. رقم الحظ والقلوب والمساعدات والمجموعات</h2>
         <Toggle checked={powers} onChange={setPowers} label="رقم الحظ والقدرات" hint="كل 3 إجابات صحيحة متتالية = رمية حظ من 1 إلى 6" />
         {powers && (
           <div className="grid gap-1.5 rounded-xl bg-ivory-100 p-3 sm:grid-cols-2">
@@ -137,6 +139,8 @@ export default function NewChallenge() {
             ))}
           </div>
         )}
+        <Toggle checked={heartsOn} onChange={setHeartsOn} label="❤️ ثلاثة قلوب وعقوبة الخطأ" hint="كل خطأ يُفقد الطالب قلبًا و5 نقاط، ومن تنتهي قلوبه يخرج من اللعبة" />
+        <Toggle checked={helpsOn} onChange={setHelpsOn} label="🆘 وسائل المساعدة والمتجر" hint="حذف إجابتين، رأي الجمهور، تبديل السؤال، وشراء قلوب ودروع بالنقاط" />
         <Toggle checked={teamsOn} onChange={setTeamsOn} label="تنافس المجموعات" hint="يجمع كل فريق نقاط أعضائه، ويمكن الانتزاع من مجموعة منافسة أو قصفها" />
         {teamsOn && (
           <div className="space-y-2 rounded-xl bg-ivory-100 p-3">

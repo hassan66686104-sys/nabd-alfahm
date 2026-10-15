@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import { Brand, Credit } from '@/components/Logo';
 import { Card } from '@/components/ui';
+import { FunBackdrop } from '@/components/fun';
 
 const SECTIONS: { title: string; body: string[] }[] = [
   {
@@ -56,7 +57,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
 
 export default function Privacy() {
   return (
-    <div className="min-h-dvh bg-ivory">
+    <FunBackdrop tone="light">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-8">
         <div className="flex items-center justify-between">
           <Link to="/" className="rounded-2xl bg-white px-3 py-2 shadow"><Brand /></Link>
@@ -77,6 +78,6 @@ export default function Privacy() {
         </Card>
         <Credit className="text-brand-800" />
       </div>
-    </div>
+    </FunBackdrop>
   );
 }

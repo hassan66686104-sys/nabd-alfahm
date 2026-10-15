@@ -3,7 +3,7 @@ import { uuid } from './uuid';
 import { supabase, isConfigured, publicAppUrl } from './supabase';
 import { AppError, toAppError } from './errors';
 import type {
-  Answer, ClassGroup, GameEvent, GamePowerResult, GameRollResult, GameSettings, GameState, GameSubmitResult, Participant, Profile, Question, Report, ResponseRow, Session, SessionQuestion, Snapshot, StudentState, Subject, Team, TeacherSettings,
+  Answer, ClassGroup, GameBuyResult, GameEvent, GameHelp, GameHelpResult, ShopItem, GamePowerResult, GameRollResult, GameSettings, GameState, GameSubmitResult, Participant, Profile, Question, Report, ResponseRow, Session, SessionQuestion, Snapshot, StudentState, Subject, Team, TeacherSettings,
 } from './types';
 import type { QuestionInput } from './schemas';
 import type { SessionSummary } from './stats';
@@ -232,7 +232,7 @@ export const updateSessionQuestion = (id: string, patch: Partial<SessionQuestion
 export const removeSessionQuestion = (id: string) => run(supabase.from('session_questions').delete().eq('id', id).eq('status', 'draft'));
 
 export const listParticipants = (sessionId: string) =>
-  run(supabase.from('participants').select('id,session_id,display_name,alias,team_id,is_removed,joined_at,last_seen_at').eq('session_id', sessionId).order('joined_at')) as Promise<Participant[]>;
+  run(supabase.from('participants').select('id,session_id,display_name,alias,team_id,is_removed,avatar,joined_at,last_seen_at').eq('session_id', sessionId).order('joined_at')) as Promise<Participant[]>;
 export const listResponses = (sessionId: string) =>
   run(supabase.from('responses').select('*').eq('session_id', sessionId)) as Promise<ResponseRow[]>;
 export const listTeams = (sessionId: string) =>
@@ -291,7 +291,7 @@ export const student = {
 // ---------- «تحدي الكأس» ----------
 export interface GamePlayerRow {
   participant_id: string; points: number; answered: number; correct: number; best_streak: number;
-  shield_until: string | null; frozen_until: string | null; updated_at: string;
+  shield_until: string | null; frozen_until: string | null; hearts: number; out_at: string | null; updated_at: string;
 }
 export interface GameEventRow { id: number; kind: string; actor_id: string | null; target_id: string | null; team_id: string | null; amount: number; created_at: string }
 
@@ -305,11 +305,17 @@ export const game = {
     run(supabase.rpc('game_roll', { p_participant: participantId, p_token: token })) as Promise<StudentResult<GameRollResult>>,
   usePower: (participantId: string, token: string, target: string | null, team: string | null) =>
     run(supabase.rpc('game_use_power', { p_participant: participantId, p_token: token, p_target: target, p_team: team })) as Promise<StudentResult<GamePowerResult>>,
+  help: (participantId: string, token: string, sqId: string, kind: GameHelp) =>
+    run(supabase.rpc('game_help', { p_participant: participantId, p_token: token, p_sq: sqId, p_kind: kind })) as Promise<StudentResult<GameHelpResult>>,
+  buy: (participantId: string, token: string, item: ShopItem) =>
+    run(supabase.rpc('game_buy', { p_participant: participantId, p_token: token, p_item: item })) as Promise<StudentResult<GameBuyResult>>,
+  setAvatar: (participantId: string, token: string, avatar: string) =>
+    run(supabase.rpc('set_avatar', { p_participant: participantId, p_token: token, p_avatar: avatar })) as Promise<StudentResult<{ avatar: string }>>,
   // المعلم
   start: (sessionId: string) => run(supabase.rpc('game_start', { p_session: sessionId })),
   end: (sessionId: string) => run(supabase.rpc('game_end', { p_session: sessionId })),
   players: (sessionId: string) =>
-    run(supabase.from('game_players').select('participant_id,points,answered,correct,best_streak,shield_until,frozen_until,updated_at').eq('session_id', sessionId)) as Promise<GamePlayerRow[]>,
+    run(supabase.from('game_players').select('participant_id,points,answered,correct,best_streak,shield_until,frozen_until,hearts,out_at,updated_at').eq('session_id', sessionId)) as Promise<GamePlayerRow[]>,
   events: (sessionId: string, limit = 12) =>
     run(supabase.from('game_events').select('id,kind,actor_id,target_id,team_id,amount,created_at').eq('session_id', sessionId).order('id', { ascending: false }).limit(limit)) as Promise<GameEventRow[]>,
 };

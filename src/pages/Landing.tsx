@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GraduationCap, Presentation, Smartphone, BarChart3, ShieldCheck } from 'lucide-react';
 import { Brand, Credit, AUTHOR_CREDIT } from '@/components/Logo';
+import { FunBackdrop } from '@/components/fun';
+import SoundToggle from '@/components/SoundToggle';
 import { Button, Card, Input } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
 import { participantStore } from '@/hooks/useStudent';
@@ -12,14 +14,18 @@ export default function Landing() {
   const [code, setCode] = useState('');
   const resume = participantStore.get();
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-brand-800 via-brand-700 to-ivory">
+    <FunBackdrop>
       <div className="mx-auto flex w-full flex-col gap-8 px-4 py-8 sm:py-14 lg:px-10">
         <div className="flex items-center justify-between">
           <div className="rounded-2xl bg-white/95 px-3 py-2 shadow"><Brand /></div>
-          {session && <Button variant="gold" onClick={() => nav('/t')}>لوحة المعلم</Button>}
+          <div className="flex items-center gap-2">
+            <SoundToggle className="text-white" />
+            {session && <Button variant="gold" onClick={() => nav('/t')}>لوحة المعلم</Button>}
+          </div>
         </div>
         <div className="text-center text-white">
-          <h1 className="text-3xl font-extrabold leading-tight sm:text-5xl">بنك الأسئلة التفاعلي الذكي للمعلم</h1>
+          <div className="mb-2 text-5xl motion-safe:animate-bounce" aria-hidden>🏆</div>
+          <h1 className="text-3xl font-extrabold leading-tight drop-shadow sm:text-5xl">بنك الأسئلة التفاعلي الذكي للمعلم</h1>
           <p className="mt-3 text-lg font-bold text-gold-300">{AUTHOR_CREDIT}</p>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-brand-50 sm:text-xl">اطرح سؤالًا قصيرًا، يجيب الطلاب من أجهزتهم، وترى فورًا مدى فهمهم لتتخذ قرارك التعليمي في الحال.</p>
         </div>
@@ -58,9 +64,9 @@ export default function Landing() {
             </div>
           ))}
         </div>
-        <p className="text-center text-sm text-brand-700"><Link to="/join" className="underline">صفحة انضمام الطلاب</Link> · <Link to="/privacy" className="underline">سياسة الخصوصية</Link></p>
-        <Credit className="text-base text-brand-800" />
+        <p className="text-center text-sm text-white/90"><Link to="/join" className="underline">صفحة انضمام الطلاب</Link> · <Link to="/privacy" className="underline">سياسة الخصوصية</Link></p>
+        <Credit light className="text-base" />
       </div>
-    </div>
+    </FunBackdrop>
   );
 }

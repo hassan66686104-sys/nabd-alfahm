@@ -57,6 +57,14 @@ export function eventText(e: Pick<GameEvent, 'kind' | 'amount' | 'actor' | 'targ
     case 'blocked_freeze': return `🛡️ درع ${t} صدّ تجميد ${a}`;
     case 'raid': return `🧲 ${a} انتزع ${e.amount} نقاط من مجموعة ${who(e.team)}`;
     case 'bomb': return `💣 ${a} قصف مجموعة ${who(e.team)}: خسرت ${e.amount} نقاط`;
+    case 'out': return `💔 ${a} انتهت قلوبه وخرج من اللعبة`;
+    case 'help_fifty': return `✂️ ${a} استخدم «حذف إجابتين»`;
+    case 'help_audience': return `👥 ${a} استشار الجمهور`;
+    case 'help_swap': return `🔄 ${a} بدّل سؤاله`;
+    case 'buy_heart': return `🛒 ${a} اشترى قلبًا ❤️`;
+    case 'buy_shield': return `🛒 ${a} اشترى درعًا 🛡️`;
+    case 'buy_double': return `🛒 ${a} اشترى مضاعف النقاط`;
+    case 'buy_fifty': case 'buy_audience': case 'buy_swap': return `🛒 ${a} اشترى وسيلة مساعدة`;
     case 'trophy': return `🏆 ${a} وصل إلى ${e.amount} نقطة وفاز بالكأس!`;
     default: return `${a}`;
   }
@@ -75,7 +83,7 @@ export function formatClock(ms: number): string {
 }
 
 // أخطاء مؤقتة لا تعني خروج الطالب من التحدي
-export const GAME_SOFT_ERRORS = ['FROZEN', 'ALREADY_ANSWERED', 'QUESTION_NOT_FOUND', 'INVALID_ANSWER', 'NO_SPINS', 'NO_POWER', 'USE_POWER_FIRST', 'INVALID_TARGET', 'GAME_OVER', 'GAME_NOT_STARTED'];
+export const GAME_SOFT_ERRORS = ['OUT', 'NO_HELP', 'HELP_NOT_FOR_QUESTION', 'ALREADY_USED', 'NOT_ENOUGH_POINTS', 'MAX_HEARTS', 'HELPS_OFF', 'FROZEN', 'ALREADY_ANSWERED', 'QUESTION_NOT_FOUND', 'INVALID_ANSWER', 'NO_SPINS', 'NO_POWER', 'USE_POWER_FIRST', 'INVALID_TARGET', 'GAME_OVER', 'GAME_NOT_STARTED'];
 
 // آخر رمز تحديات استخدمه الطالب على هذا الجهاز، للعودة إلى قائمة الدروس
 const PRACTICE_CODE_KEY = 'nabd.practice-code';
@@ -85,3 +93,18 @@ export function lastPracticeCode(): string | null {
 export function rememberPracticeCode(code: string) {
   try { localStorage.setItem(PRACTICE_CODE_KEY, code); } catch { /* التخزين غير متاح */ }
 }
+
+// وسائل المساعدة والمتجر
+export const HELPS: Record<import('./types').GameHelp, { emoji: string; title: string; text: string }> = {
+  fifty: { emoji: '✂️', title: 'حذف إجابتين', text: 'يحذف إجابتين خاطئتين من أسئلة الاختيار (4 خيارات أو 3).' },
+  audience: { emoji: '👥', title: 'رأي الجمهور', text: 'يعرض ما يختاره الجمهور. غالبًا يصيب، وقد يخطئ!' },
+  swap: { emoji: '🔄', title: 'تبديل السؤال', text: 'يتخطى هذا السؤال إلى سؤال آخر دون عقوبة.' },
+};
+export const SHOP: { item: import('./types').ShopItem; emoji: string; title: string; price: number }[] = [
+  { item: 'heart', emoji: '❤️', title: 'قلب إضافي', price: 30 },
+  { item: 'fifty', emoji: '✂️', title: 'حذف إجابتين', price: 20 },
+  { item: 'audience', emoji: '👥', title: 'رأي الجمهور', price: 15 },
+  { item: 'swap', emoji: '🔄', title: 'تبديل السؤال', price: 15 },
+  { item: 'shield', emoji: '🛡️', title: 'درع 90 ثانية', price: 25 },
+  { item: 'double', emoji: '✖️2', title: 'مضاعف الإجابة التالية', price: 20 },
+];

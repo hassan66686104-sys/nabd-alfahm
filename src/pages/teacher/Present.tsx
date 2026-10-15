@@ -12,6 +12,7 @@ import { computeLeaderboard, computeQuestionStats } from '@/lib/stats';
 import { OPTION_LETTERS, gameLabel } from '@/lib/constants';
 import ChallengePresent from './ChallengePresent';
 import NativeBack from '@/components/NativeBack';
+import { FunBackdrop } from '@/components/fun';
 
 export default function Present() {
   const { id } = useParams();
@@ -38,7 +39,7 @@ export default function Present() {
   const fullscreen = () => { void document.documentElement.requestFullscreen?.().catch(() => {}); };
 
   return (
-    <div className="min-h-dvh bg-ivory">
+    <FunBackdrop tone="light">
       <header className="flex items-center justify-between gap-4 bg-brand-800 px-6 py-3 text-white">
         <div className="flex items-center gap-3"><NativeBack /><Logo className="h-10 w-10" /><span className="text-2xl font-extrabold">{session.title}</span></div>
         <div className="flex items-center gap-6 text-2xl font-bold">
@@ -129,6 +130,6 @@ export default function Present() {
           )}
         </main>
       )}
-    </div>
+    </FunBackdrop>
   );
 }

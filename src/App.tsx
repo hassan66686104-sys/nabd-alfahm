@@ -1,4 +1,5 @@
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
+import { sfx } from './lib/sound';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { isConfigured } from './lib/supabase';
@@ -35,7 +36,20 @@ function RequireTeacher({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+// نقرة خفيفة عند الضغط على أي زر أو رابط في كل الصفحات (تُكتم من زر الصوت)
+function useTapSound() {
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      const el = (e.target as Element | null)?.closest('button:not(:disabled), a[href], [role="radio"], [role="tab"], [role="switch"]');
+      if (el) sfx.tap();
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, []);
+}
+
 export default function App() {
+  useTapSound();
   if (!isConfigured) {
     return (
       <Routes>

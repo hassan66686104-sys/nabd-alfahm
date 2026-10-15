@@ -12,6 +12,7 @@ import { sfx } from '@/lib/sound';
 import SoundToggle from '@/components/SoundToggle';
 import GamePlay from './GamePlay';
 import type { Answer } from '@/lib/types';
+import { FunBackdrop } from '@/components/fun';
 
 export default function Play() {
   const stored = useMemo(() => participantStore.get(), []);
@@ -179,10 +180,10 @@ export default function Play() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-brand-800 to-brand-900">
+    <FunBackdrop>
       <OfflineBanner extra="إجاباتك تُحفظ وتُرسل عند عودة الاتصال." />
       <div className="mx-auto flex w-full max-w-xl flex-col gap-4 px-3 py-4 sm:px-4 lg:max-w-5xl lg:px-8">{children}<Credit light className="pt-4" /></div>
-    </div>
+    </FunBackdrop>
   );
 }
 

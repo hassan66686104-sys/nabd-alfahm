@@ -63,5 +63,11 @@ export const sfx = {
   bomb: () => play([{ f: 180, t: 0, d: 0.6, type: 'sawtooth', to: 40, v: 0.2 }]),
   streak: () => play([523, 659, 784].map((f, i) => ({ f, t: i * 0.08, d: 0.15, type: 'triangle' as OscillatorType }))),
   win: () => play([523, 659, 784, 1047, 784, 1047].map((f, i) => ({ f, t: i * 0.13, d: i === 5 ? 0.6 : 0.16, type: 'triangle' as OscillatorType, v: 0.2 }))),
+  heart: () => play([{ f: 440, t: 0, d: 0.2, type: 'triangle', to: 330, v: 0.15 }, { f: 330, t: 0.18, d: 0.35, type: 'triangle', to: 180, v: 0.13 }]),
+  out: () => play([392, 330, 262, 196].map((f, i) => ({ f, t: i * 0.18, d: 0.22, type: 'triangle' as OscillatorType, v: 0.15 }))),
+  buy: () => play([{ f: 1200, t: 0, d: 0.06, type: 'square', v: 0.05 }, { f: 1600, t: 0.06, d: 0.06, type: 'square', v: 0.05 }, { f: 2000, t: 0.12, d: 0.2, type: 'sine', v: 0.1 }]),
+  help: () => play([{ f: 600, t: 0, d: 0.3, type: 'sine', to: 1200, v: 0.12 }, { f: 1200, t: 0.25, d: 0.2, type: 'triangle', v: 0.1 }]),
+  tap: () => play([{ f: 880, t: 0, d: 0.05, type: 'sine', v: 0.05 }]),
+  ok: () => play([{ f: 784, t: 0, d: 0.1, type: 'sine', v: 0.1 }, { f: 1175, t: 0.08, d: 0.18, type: 'sine', v: 0.1 }]),
   start: () => play([{ f: 440, t: 0, d: 0.15 }, { f: 440, t: 0.3, d: 0.15 }, { f: 880, t: 0.6, d: 0.4, type: 'triangle' }]),
 };

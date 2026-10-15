@@ -7,10 +7,11 @@ import { auth } from '@/lib/api';
 import { authSchema, firstError } from '@/lib/schemas';
 import { toAppError } from '@/lib/errors';
 import { useAuth } from '@/hooks/useAuth';
+import { FunBackdrop } from '@/components/fun';
 
 function Shell({ title, children, footer }: { title: string; children: ReactNode; footer?: ReactNode }) {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-gradient-to-b from-brand-50 to-ivory px-4 py-10">
+    <FunBackdrop tone="light"><div className="flex min-h-dvh items-center justify-center px-4 py-10">
       <div className="w-full max-w-md space-y-5">
         <Link to="/" className="flex justify-center"><Brand /></Link>
         <Card className="space-y-4 p-6">
@@ -21,7 +22,7 @@ function Shell({ title, children, footer }: { title: string; children: ReactNode
         <p className="text-center text-sm"><Link to="/privacy" className="text-brand-600 underline">سياسة الخصوصية</Link></p>
         <Credit />
       </div>
-    </div>
+    </div></FunBackdrop>
   );
 }
 

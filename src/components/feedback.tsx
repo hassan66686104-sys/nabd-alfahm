@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { CheckCircle2, AlertTriangle, Info, WifiOff } from 'lucide-react';
 import { Button, Modal, cx } from './ui';
+import { sfx } from '@/lib/sound';
 
 type ToastKind = 'success' | 'error' | 'info';
 interface Toast { id: number; kind: ToastKind; text: string }
@@ -19,6 +20,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
 
   const toast = useCallback((text: string, kind: ToastKind = 'success') => {
     const id = Date.now() + Math.random();
+    if (kind === 'error') sfx.wrong(); else sfx.ok();
     setToasts((t) => [...t.slice(-3), { id, kind, text }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), kind === 'error' ? 6000 : 3500);
   }, []);

@@ -65,12 +65,13 @@ export function useChallenge(sessionId: string | undefined) {
           team: t?.name ?? null, team_id: t?.id ?? null, color: t?.color ?? null,
           shield: !!g.shield_until && new Date(g.shield_until).getTime() > nowMs,
           frozen: !!g.frozen_until && new Date(g.frozen_until).getTime() > nowMs,
+          avatar: p.avatar ?? null, out: !!g.out_at, hearts: g.hearts,
         };
       })
       .sort((a, b) => b.points - a.points);
     const teamRows: GameTeamRow[] = teams.map((t) => ({ id: t.id, name: t.name, color: t.color, points: rows.filter((r) => r.team_id === t.id).reduce((s, r) => s + r.points, 0) }));
     const feed: GameEvent[] = events.map((e) => ({ id: e.id, kind: e.kind, amount: e.amount, actor: name(e.actor_id), target: name(e.target_id), team: e.team_id ? teamById.get(e.team_id)?.name ?? null : null, at: e.created_at }));
-    const winner = session?.winner_id ? { id: session.winner_id, name: name(session.winner_id) ?? '' } : null;
+    const winner = session?.winner_id ? { id: session.winner_id, name: name(session.winner_id) ?? '', avatar: byId.get(session.winner_id)?.avatar ?? null } : null;
     return { rows, teamRows, feed, winner, joined: participants.filter((p) => !p.is_removed).length };
   }, [session, participants, teams, players, events, clockOffset]);
 

@@ -626,3 +626,94 @@ test('حذف الحساب: المعلم يحذف حسابه فقط مع كل ب�
   // حسابات المعلمين الآخرين لم تتأثر
   assert.equal((await as('postgres', null, 'select count(*)::int c from auth.users where id = any($1)', [[T_A, T_B]])).rows[0].c, 2);
 });
+
+test('تحدي الكأس: القلوب والعقوبة ووسائل المساعدة والمتجر والشخصيات', async () => {
+  const link = (await A('select code from practice_links')).rows[0];
+  await A('update practice_links set enabled=true');
+  const caps = [['مصر', 'القاهرة'], ['الأردن', 'عمّان'], ['قطر', 'الدوحة'], ['تونس', 'تونس'], ['لبنان', 'بيروت']];
+  const all = caps.map((c) => c[1]);
+  for (const [country, cap] of caps) {
+    await saveQ(A, { type: 'mcq', answer_format: 'single', text: `ما عاصمة ${country}؟`, lesson: 'العواصم' },
+      [cap, ...all.filter((x) => x !== cap).slice(0, 3)].map((t, i) => ({ text: t, is_correct: i === 0 })));
+  }
+  const pl = (await anon('select public.practice_start($1,$2,$3,false) as r', [link.code, 'العواصم', 'خالد'], '10.9.1.1')).rows[0].r;
+  assert.equal(pl.ok, true);
+  const gs = async () => (await anon('select public.game_state($1,$2) as r', [pl.participant_id, pl.token])).rows[0].r;
+  const call = async (sql, args) => (await anon(`select ${sql} as r`, [pl.participant_id, pl.token, ...args])).rows[0].r;
+  const snapOf = async (sq) => (await A('select snapshot from session_questions where id=$1', [sq])).rows[0].snapshot;
+  const correctId = (snap) => snap.options.find((o) => o.is_correct).id;
+
+  // الشخصية: من القائمة فقط
+  assert.equal((await call('public.set_avatar($1,$2,$3)', ['hacker'])).error, 'INVALID_AVATAR');
+  assert.equal((await call('public.set_avatar($1,$2,$3)', ['lion'])).ok, true);
+  let g = await gs();
+  assert.equal(g.me.avatar, 'lion');
+  assert.equal(g.board[0].avatar, 'lion');
+  assert.equal(g.me.hearts, 3);
+  assert.deepEqual(g.me.helps, { fifty: 1, audience: 1, swap: 1 });
+
+  // حذف إجابتين: يبقى خياران أحدهما الصحيح، ولا تظهر الإجابة الصحيحة للطالب
+  let q = g.question;
+  let snap = await snapOf(q.sq_id);
+  assert.equal(q.options.length, 4);
+  const fifty = await call('public.game_help($1,$2,$3,$4)', [q.sq_id, 'fifty']);
+  assert.equal(fifty.hide.length, 2);
+  assert.equal(fifty.hide.includes(correctId(snap)), false);
+  g = await gs();
+  assert.equal(g.question.options.length, 2);
+  assert.ok(g.question.options.some((o) => o.id === correctId(snap)));
+  assert.equal(JSON.stringify(g).includes('is_correct'), false);
+  assert.equal((await call('public.game_help($1,$2,$3,$4)', [q.sq_id, 'fifty'])).error, 'NO_HELP');
+
+  // رأي الجمهور: نسب لخيارين باقيين مجموعها 100
+  const aud = await call('public.game_help($1,$2,$3,$4)', [q.sq_id, 'audience']);
+  assert.equal(aud.votes.length, 2);
+  assert.equal(aud.votes.reduce((a, v) => a + v.pct, 0), 100);
+  assert.equal((await gs()).question.audience.length, 2);
+
+  // إجابة صحيحة = +10
+  let r = await call('public.game_submit($1,$2,$3,$4::jsonb)', [q.sq_id, JSON.stringify({ option_id: correctId(snap) })]);
+  assert.equal(r.gain, 10);
+
+  // تبديل السؤال: ينتقل إلى سؤال آخر دون عقوبة
+  q = (await gs()).question;
+  assert.equal(q.number, 2);
+  assert.equal((await call('public.game_help($1,$2,$3,$4)', [q.sq_id, 'swap'])).ok, true);
+  g = await gs();
+  assert.notEqual(g.question.sq_id, q.sq_id);
+  assert.equal(g.question.number, 3);
+  assert.equal(g.me.points, 10);
+  assert.equal((await call('public.game_submit($1,$2,$3,$4::jsonb)', [q.sq_id, '{"option_id":"x"}'])).error, 'QUESTION_NOT_FOUND');
+
+  // المتجر: الشراء بالنقاط فقط
+  assert.equal((await call('public.game_buy($1,$2,$3)', ['fifty'])).error, 'NOT_ENOUGH_POINTS');
+  await as('postgres', null, 'update game_players set points = 100 where participant_id=$1', [pl.participant_id]);
+  const heart = await call('public.game_buy($1,$2,$3)', ['heart']);
+  assert.equal(heart.hearts, 4);
+  assert.equal(heart.points, 70);
+  assert.equal((await call('public.game_buy($1,$2,$3)', ['fifty'])).helps.fifty, 1);
+  assert.equal((await call('public.game_buy($1,$2,$3)', ['car'])).error, 'INVALID_ITEM');
+
+  // الخطأ: −5 نقاط وقلب أقل
+  q = (await gs()).question;
+  snap = await snapOf(q.sq_id);
+  const wrongId = snap.options.find((o) => !o.is_correct).id;
+  r = await call('public.game_submit($1,$2,$3,$4::jsonb)', [q.sq_id, JSON.stringify({ option_id: wrongId })]);
+  assert.equal(r.correct, false);
+  assert.equal(r.lost, 5);
+  assert.equal(r.hearts, 3);
+  assert.equal(r.points, 45);
+
+  // انتهاء القلوب: يخرج من اللعبة ولا يستطيع الإجابة، وينتهي التحدي لعدم بقاء لاعبين
+  await as('postgres', null, 'update game_players set hearts = 1 where participant_id=$1', [pl.participant_id]);
+  q = (await gs()).question;
+  snap = await snapOf(q.sq_id);
+  r = await call('public.game_submit($1,$2,$3,$4::jsonb)', [q.sq_id, JSON.stringify({ option_id: snap.options.find((o) => !o.is_correct).id })]);
+  assert.equal(r.out, true);
+  assert.equal(r.hearts, 0);
+  g = await gs();
+  assert.equal(g.me.out, true);
+  assert.equal(g.question, null);
+  assert.equal(g.session.status, 'ended');
+  assert.equal(g.events.some((e) => e.kind === 'out'), true);
+});

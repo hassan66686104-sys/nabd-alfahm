@@ -66,11 +66,23 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   await expect(solo.getByText(`تحديات ${tname}`)).toBeVisible();
   await expect(solo.getByLabel('رمز التحديات')).toHaveCount(0);
   await solo.getByLabel('اسمك (اختياري)').fill('سلمى');
+  // الطالبة تختار شخصيتها: سيارة سباق
+  await solo.getByRole('tab', { name: 'سيارات ومركبات' }).click();
+  await solo.getByRole('radio', { name: 'سيارة سباق' }).click();
   await shot(solo, '41-practice-lessons');
   await solo.getByTestId('lesson').filter({ hasText: 'الأخلاق' }).click();
   await expect(solo.getByText('السؤال 1 من 4')).toBeVisible();
   // تُقاس البطاقة بعد انتهاء حركة ظهورها
   await expect.poll(async () => (await solo.getByTestId('game-question').boundingBox())?.width ?? 0).toBeGreaterThan(800);
+  await expect(solo.getByTestId('hearts')).toHaveAttribute('aria-label', 'القلوب 3');
+  await expect(solo.getByRole('img', { name: 'سيارة سباق' }).first()).toBeVisible();
+  await expect(solo.getByTestId('helps')).toBeVisible();
+  // المتجر يفتح ويعرض الأسعار، ولا يسمح بالشراء دون نقاط كافية
+  await solo.getByRole('button', { name: 'المتجر' }).click();
+  await expect(solo.getByTestId('shop').getByRole('button', { name: /قلب إضافي/ })).toBeDisabled();
+  await shot(solo, '45-shop');
+  await solo.keyboard.press('Escape');
+  await expect(solo.getByTestId('shop')).toBeHidden();
   await shot(solo, '44-laptop-student-game');
   await answerAll(solo);
   await expect(solo.getByTestId('game-winner')).toHaveText('سلمى', { timeout: 10000 });

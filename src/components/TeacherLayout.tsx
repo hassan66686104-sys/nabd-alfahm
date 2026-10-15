@@ -5,6 +5,8 @@ import { OfflineBanner } from './feedback';
 import { useAuth } from '@/hooks/useAuth';
 import { auth } from '@/lib/api';
 import { cx } from './ui';
+import { FunBackdrop } from './fun';
+import SoundToggle from './SoundToggle';
 
 const NAV = [
   { to: '/t', label: 'الرئيسية', icon: Home, end: true },
@@ -18,7 +20,7 @@ export default function TeacherLayout() {
   const { profile, session } = useAuth();
   const navigate = useNavigate();
   return (
-    <div className="min-h-dvh pb-20 lg:pb-0">
+    <FunBackdrop tone="light" className="pb-20 lg:pb-0">
       <OfflineBanner />
       <header className="no-print sticky top-0 z-30 border-b border-brand-100 bg-white/90 backdrop-blur">
         <div className="flex h-16 w-full items-center justify-between gap-4 px-4 lg:px-8">
@@ -32,6 +34,7 @@ export default function TeacherLayout() {
             ))}
           </nav>
           <div className="flex items-center gap-2">
+            <SoundToggle className="text-brand-600 hover:bg-brand-50" />
             <span className="hidden text-sm text-brand-600 sm:inline">{profile?.full_name || session?.user.email}</span>
             <button onClick={async () => { await auth.signOut(); navigate('/'); }} className="rounded-xl p-2 text-brand-600 hover:bg-brand-50" title="تسجيل الخروج" aria-label="تسجيل الخروج">
               <LogOut className="h-5 w-5" />
@@ -51,6 +54,6 @@ export default function TeacherLayout() {
           </NavLink>
         ))}
       </nav>
-    </div>
+    </FunBackdrop>
   );
 }

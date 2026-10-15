@@ -7,6 +7,7 @@ import { Badge, Button, Card, ErrorBox, Modal, ProgressBar, cx } from '@/compone
 import { OfflineBanner } from '@/components/feedback';
 import SoundToggle from '@/components/SoundToggle';
 import { Confetti, FunBackdrop, ScorePop, VividStat, useBump } from '@/components/fun';
+import { Avatar } from '@/components/Avatar';
 import { AnswerInput, answerComplete, emptyAnswer } from '@/components/AnswerInput';
 import { Hint, QuestionImage, QuestionText, Stimulus, useTick } from '@/components/QuestionView';
 import { EventFeed, Leaderboard, Podium, TeamScores } from '@/components/challenge';
@@ -14,12 +15,12 @@ import { participantStore, type StoredParticipant } from '@/hooks/useStudent';
 import { game, practice } from '@/lib/api';
 import { lastPracticeCode } from '@/lib/game';
 import { isNetworkError, messageFor, toAppError } from '@/lib/errors';
-import { GAME_SOFT_ERRORS, LUCK, POWER_ACTION, formatClock, goalText, luckTable, powerNeedsTeam } from '@/lib/game';
+import { GAME_SOFT_ERRORS, HELPS, SHOP, LUCK, POWER_ACTION, formatClock, goalText, luckTable, powerNeedsTeam } from '@/lib/game';
 import { sfx } from '@/lib/sound';
 import { uuid } from '@/lib/uuid';
-import type { Answer, GameRollResult, GameState, GameSubmitResult, StudentQuestion } from '@/lib/types';
+import type { Answer, GameHelp, GameRollResult, GameState, GameSubmitResult, ShopItem, StudentQuestion } from '@/lib/types';
 
-type Shown = StudentQuestion & { total: number };
+type Shown = StudentQuestion & { total: number; option_count?: number; fifty_used?: boolean; audience?: { id: string; pct: number }[] | null };
 interface Feedback extends GameSubmitResult { sq_id: string }
 
 export default function GamePlay({ p }: { p: StoredParticipant }) {
@@ -44,6 +45,11 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
   const [shake, setShake] = useState(0);
   const pointsBump = useBump(gs?.me.points);
   const celebrated = useRef(false);
+  // وسائل المساعدة والمتجر
+  const [helping, setHelping] = useState<GameHelp | null>(null);
+  const [shopOpen, setShopOpen] = useState(false);
+  const [buying, setBuying] = useState<ShopItem | null>(null);
+  const wasOut = useRef(false);
   const now = useTick(500, offset);
   const busy = useRef(false);
   const reqIds = useRef(new Map<string, string>());
@@ -100,6 +106,7 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
     }
     if (st === 'ended' && !celebrated.current) { celebrated.current = true; setBurst((b) => b + 1); }
     prevStatus.current = st;
+    if (gs.me.out && !wasOut.current) { wasOut.current = true; sfx.out(); }
     const newest = gs.events[0]?.id ?? 0;
     if (lastEvent.current !== null) {
       const fresh = gs.events.filter((e) => e.id > lastEvent.current!).reverse();
@@ -156,7 +163,7 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
       if (r.ok) {
         setFeedback({ ...r, sq_id: shown.sq_id });
         if (r.correct) { setBurst((b) => b + 1); setPop({ amount: r.gain, k: Date.now() }); }
-        else if (r.correct === false) setShake(Date.now());
+        else if (r.correct === false) { setShake(Date.now()); if (r.lost) setPop({ amount: -r.lost, k: Date.now() }); if (r.hearts != null && !r.out) setTimeout(sfx.heart, 450); }
         if (r.won) sfx.win();
         else if (r.correct) { sfx.correct(); if (r.spin_earned) setTimeout(sfx.streak, 350); else if (r.gain > 10) setTimeout(sfx.coin, 300); }
         else if (r.correct === false) sfx.wrong();
@@ -220,16 +227,63 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
     finally { setActing(false); }
   };
 
+  const applyHelp = async (kind: GameHelp) => {
+    if (!shown) return;
+    setHelping(kind); setTransient(null);
+    try {
+      const r = await game.help(p.participant_id, p.token, shown.sq_id, kind);
+      if (!r.ok) { setTransient(messageFor(r.error)); return; }
+      sfx.help();
+      if (kind === 'fifty' && r.hide) {
+        const hide = new Set(r.hide);
+        setShown((q) => (q ? { ...q, options: q.options.filter((o) => !hide.has(o.id)), fifty_used: true } : q));
+        setDraft((d) => (d.option_id && hide.has(d.option_id) ? {} : d));
+      } else if (kind === 'audience' && r.votes) {
+        setShown((q) => (q ? { ...q, audience: r.votes } : q));
+      } else if (kind === 'swap') {
+        setNotice('🔄 بدّلت السؤال');
+        setShown(null); setFeedback(null);
+      }
+      void refresh();
+    } catch (e) { setTransient(toAppError(e).message); }
+    finally { setHelping(null); }
+  };
+
+  const buy = async (item: ShopItem) => {
+    setBuying(item); setTransient(null);
+    try {
+      const r = await game.buy(p.participant_id, p.token, item);
+      if (!r.ok) { setTransient(messageFor(r.error)); sfx.wrong(); return; }
+      sfx.buy();
+      const it = SHOP.find((x) => x.item === item);
+      setNotice(`🛒 اشتريت ${it?.title ?? ''} ${it?.emoji ?? ''}`);
+      setPop({ amount: -r.price, k: Date.now() });
+      await refresh();
+    } catch (e) { setTransient(toAppError(e).message); }
+    finally { setBuying(null); }
+  };
+
+  const helpsOn = g.helps !== false;
+  const heartsOn = me.max_hearts > 0;
+  const hearts = heartsOn ? (
+    <div className="flex items-center gap-0.5 rounded-full bg-white/90 px-2 py-1 shadow" aria-label={`القلوب ${me.hearts}`} data-testid="hearts">
+      {Array.from({ length: Math.max(me.max_hearts, me.hearts) }, (_, i) => (
+        <span key={i} className={cx('text-lg leading-none transition', i < me.hearts ? 'motion-safe:animate-[bump_.45s_ease-out]' : 'opacity-40 grayscale')}>{i < me.hearts ? '❤️' : '🤍'}</span>
+      ))}
+    </div>
+  ) : null;
+
   const header = (
     <div className="flex items-center justify-between gap-2 text-white">
       <div className="flex min-w-0 items-center gap-2">
-        <Logo className="h-9 w-9 shrink-0" />
+        {me.avatar ? <Avatar id={me.avatar} size="md" /> : <Logo className="h-9 w-9 shrink-0" />}
         <div className="min-w-0 leading-tight">
           <div className="truncate font-bold">{gs.session.title}</div>
           <div className="text-sm text-brand-100">{me.name}{me.rank ? ` · المركز ${me.rank}` : ''}</div>
         </div>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center justify-end gap-1">
+        {hearts}
         <span className={cx('inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-yellow-300 to-orange-400 px-3 py-1 text-sm font-extrabold text-purple-950 shadow-lg', pointsBump)}><Star className="h-4 w-4 fill-current motion-safe:animate-spin [animation-duration:4s]" /><span data-testid="my-points">{me.points}</span> نقطة</span>
         <SoundToggle className="text-white" />
       </div>
@@ -276,6 +330,12 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
             ) : <p className="text-brand-600">بانتظار {gs.board.find((r) => r.id === g.host)?.name ?? 'صاحب التحدي'} ليبدأ التحدي. استعد!</p>
           ) : <p className="text-brand-600">سيبدأ التحدي عندما يضغط المعلم «ابدأ».</p>}
           <p className="text-brand-600">أجب بسرعة وبدقة: كل إجابة صحيحة = 10 نقاط.</p>
+          {(heartsOn || helpsOn) && (
+            <div className="grid gap-2 text-start text-sm sm:grid-cols-2">
+              {heartsOn && <div className="rounded-xl bg-rose-50 p-3"><b>❤️ لديك {me.max_hearts} قلوب</b><br />كل إجابة خاطئة تُفقدك قلبًا و5 نقاط، وإذا انتهت القلوب تخرج من اللعبة.</div>}
+              {helpsOn && <div className="rounded-xl bg-indigo-50 p-3"><b>🆘 وسائل المساعدة</b><br />✂️ حذف إجابتين · 👥 رأي الجمهور · 🔄 تبديل السؤال. واشترِ المزيد من 🛒 المتجر بنقاطك.</div>}
+            </div>
+          )}
           {powersOn && (
             <div className="rounded-xl bg-ivory-100 p-3 text-start text-sm">
               <div className="mb-1 font-bold">كل 3 إجابات صحيحة متتالية = رمية حظ 🎲</div>
@@ -289,8 +349,36 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
     );
   }
 
+  // انتهت القلوب: يخرج الطالب ويتابع الترتيب حتى ينتهي التحدي
+  if (me.out) {
+    return (
+      <Shell>
+        {header}
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
+          <Card className="animate-bounceIn space-y-3 py-8 text-center" data-testid="game-out">
+            <div className="text-7xl motion-safe:animate-pulse">💔</div>
+            <h1 className="text-3xl font-black text-rose-700">انتهت قلوبك!</h1>
+            <p className="text-lg">خرجت من التحدي بـ <b>{me.points}</b> نقطة{me.rank ? ` في المركز ${me.rank}` : ''}.</p>
+            <p className="text-brand-600">أجبت {me.correct} إجابة صحيحة. راجع الدرس وحاول مرة أخرى، ستكون أقوى! 💪</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {g.practice && <Button variant="gold" onClick={() => { participantStore.clear(); nav(lastPracticeCode() ? `/practice/${lastPracticeCode()}` : '/practice'); }}>تحدٍّ جديد</Button>}
+              <Button variant="outline" onClick={() => { participantStore.clear(); nav('/'); }}>الخروج</Button>
+            </div>
+          </Card>
+          <Card className="space-y-2"><h2 className="font-bold">الترتيب</h2><Leaderboard rows={gs.board} target={target} limit={8} /></Card>
+        </div>
+      </Shell>
+    );
+  }
+
   const q = shown;
   const canAnswer = !!q && !feedback && frozenLeft <= 0 && !sending;
+  const choiceQ = !!q && q.answer_format === 'single' && (q.option_count ?? q.options.length) >= 3;
+  const helpOk: Record<GameHelp, boolean> = {
+    fifty: choiceQ && !q?.fifty_used,
+    audience: choiceQ && !q?.audience,
+    swap: true,
+  };
 
   return (
     <Shell>
@@ -336,14 +424,50 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
         </div>
       )}
 
+      {helpsOn && q && !feedback && (
+        <div className="grid grid-cols-4 gap-2" data-testid="helps">
+          {(Object.keys(HELPS) as GameHelp[]).map((k) => {
+            const n = me.helps?.[k] ?? 0;
+            return (
+              <button key={k} type="button" onClick={() => applyHelp(k)} disabled={!!helping || n < 1 || !helpOk[k] || !canAnswer}
+                title={HELPS[k].text} aria-label={`${HELPS[k].title} (${n})`}
+                className="relative flex flex-col items-center gap-0.5 rounded-2xl bg-white/90 p-2 text-xs font-bold text-purple-900 shadow-lg ring-1 ring-purple-200 transition hover:-translate-y-0.5 hover:bg-white disabled:translate-y-0 disabled:opacity-45">
+                <span className={cx('text-2xl', helping === k && 'animate-diceSpin')}>{HELPS[k].emoji}</span>
+                <span className="leading-tight">{HELPS[k].title}</span>
+                <span className={cx('absolute -top-1.5 left-1.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] text-white', n > 0 ? 'bg-fuchsia-600' : 'bg-slate-400')}>{n}</span>
+              </button>
+            );
+          })}
+          <button type="button" onClick={() => setShopOpen(true)} aria-label="المتجر"
+            className="flex flex-col items-center gap-0.5 rounded-2xl bg-gradient-to-b from-amber-200 to-amber-300 p-2 text-xs font-bold text-amber-950 shadow-lg ring-1 ring-amber-300 transition hover:-translate-y-0.5">
+            <span className="text-2xl motion-safe:animate-wiggle">🛒</span><span>المتجر</span>
+          </button>
+        </div>
+      )}
+
       {q ? (
         <Card key={`${q.sq_id}-${shake}`} className={cx('relative space-y-4 border-t-8 border-t-fuchsia-500 shadow-2xl', shake && feedback?.correct === false ? 'animate-shake' : 'animate-bounceIn')} data-testid="game-question">
-          <ScorePop amount={pop.amount} k={feedback?.correct ? pop.k : 0} />
+          <ScorePop amount={pop.amount} k={pop.k} />
           <div className="flex items-center justify-between"><span className="rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-500 px-3 py-1 text-sm font-bold text-white">السؤال {q.number} من {q.total}</span>{me.double_next && <Badge tone="gold">×2</Badge>}</div>
           <Stimulus kind={q.stimulus_kind} text={q.stimulus_text} source={q.stimulus_source} />
           <QuestionImage url={q.image_url} />
           <QuestionText text={q.text} blanksAs={q.answer_format === 'blanks' ? 'line' : undefined} />
           {!feedback && <Hint hint={q.hint} />}
+          {q.audience && !feedback && (
+            <div className="space-y-1.5 rounded-2xl bg-indigo-50 p-3" data-testid="audience">
+              <div className="text-sm font-bold text-indigo-900">👥 رأي الجمهور (قد يخطئ!)</div>
+              {q.options.map((o, i) => {
+                const pct = q.audience?.find((v) => v.id === o.id)?.pct ?? 0;
+                return (
+                  <div key={o.id} className="flex items-center gap-2 text-sm">
+                    <span className="w-24 shrink-0 truncate font-semibold">{['أ', 'ب', 'ج', 'د', 'هـ', 'و'][i]}. {o.text}</span>
+                    <span className="h-4 flex-1 overflow-hidden rounded-full bg-white"><span className="block h-full rounded-full bg-gradient-to-l from-indigo-400 to-violet-500 transition-all duration-700" style={{ width: `${pct}%` }} /></span>
+                    <span className="w-10 shrink-0 text-end font-bold tabular-nums">{pct}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <AnswerInput q={q} value={draft} onChange={setDraft} disabled={!canAnswer} />
           {feedback ? (
             <div className="space-y-2">
@@ -352,6 +476,7 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
               ) : feedback.correct === false ? (
                 <div role="status" className="animate-pop space-y-1 rounded-2xl bg-gradient-to-r from-rose-100 to-orange-100 p-3 text-red-800 ring-2 ring-rose-300">
                   <div className="flex items-center gap-2 text-lg font-bold"><XCircle className="h-7 w-7" />إجابة غير صحيحة{feedback.gain > 0 && ` (+${feedback.gain} لجزء صحيح)`}</div>
+                  {(feedback.lost ?? 0) > 0 || heartsOn ? <div className="font-bold" data-testid="penalty">{(feedback.lost ?? 0) > 0 && `−${feedback.lost} نقاط`}{heartsOn && ' · 💔 خسرت قلبًا'}{feedback.out && ' · انتهت قلوبك!'}</div> : null}
                   {feedback.correct_text && <div>الإجابة الصحيحة: <b>{feedback.correct_text}</b></div>}
                 </div>
               ) : <div role="status" className="rounded-xl bg-brand-50 p-3 font-bold text-brand-800">سُجّلت إجابتك.</div>}
@@ -382,6 +507,22 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
       <Card className="space-y-2 bg-ivory-100"><h2 className="font-bold">ماذا يحدث؟</h2><EventFeed events={gs.events} /></Card>
       </div>
       </div>
+
+      <Modal open={shopOpen} onClose={() => setShopOpen(false)} title="🛒 المتجر">
+        <div className="space-y-3" data-testid="shop">
+          <p className="text-brand-700">اشترِ بنقاطك. لديك <b className="text-purple-700">{me.points}</b> نقطة.</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {SHOP.filter((it) => heartsOn || it.item !== 'heart').map((it) => (
+              <button key={it.item} type="button" disabled={!!buying || me.points < it.price} onClick={() => buy(it.item)}
+                className="flex items-center justify-between gap-2 rounded-2xl border-2 border-purple-100 bg-white p-3 text-start transition hover:border-purple-400 hover:bg-purple-50 disabled:opacity-50">
+                <span className="flex items-center gap-2 font-bold"><span className="text-3xl">{it.emoji}</span>{it.title}</span>
+                <span className="shrink-0 rounded-full bg-amber-100 px-2 py-1 text-sm font-extrabold text-amber-900">{buying === it.item ? '…' : `${it.price} ⭐`}</span>
+              </button>
+            ))}
+          </div>
+          {transient && <ErrorBox error={transient} />}
+        </div>
+      </Modal>
 
       <Modal open={!!roll} onClose={() => setRoll(null)} title="رقم الحظ"
         footer={<Button onClick={() => { const pw = roll?.power; setRoll(null); if (pw) setPicking(true); }}>{roll?.power ? 'اختر الهدف' : 'رائع!'}</Button>}>

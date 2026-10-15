@@ -143,6 +143,7 @@ export interface Participant {
   alias: string;
   team_id: string | null;
   is_removed: boolean;
+  avatar?: string | null;
   joined_at: string;
   last_seen_at: string;
 }
@@ -254,7 +255,11 @@ export interface GameSettings {
   target?: number;
   powers?: boolean;
   prize?: string;
+  hearts?: number; // عدد القلوب (0 = بلا قلوب ولا عقوبة)
+  helps?: boolean; // وسائل المساعدة والمتجر
 }
+export type GameHelp = 'fifty' | 'audience' | 'swap';
+export type ShopItem = GameHelp | 'heart' | 'shield' | 'double';
 export type GamePower = 'take' | 'freeze' | 'raid' | 'bomb';
 
 export interface GameEvent {
@@ -278,23 +283,30 @@ export interface GameBoardRow {
   me?: boolean;
   answered?: number;
   correct?: number;
+  avatar?: string | null;
+  out?: boolean;
+  hearts?: number;
 }
 export interface GameTeamRow { id: string; name: string; color: string; points: number; mine?: boolean }
 
 export interface GameState {
   ok: true;
   server_time: string;
-  session: { id: string; title: string; code: string; status: SessionStatus; mode: 'self'; game: GameSettings; started_at: string | null; ends_at: string | null; winner: { id: string; name: string } | null };
+  session: { id: string; title: string; code: string; status: SessionStatus; mode: 'self'; game: GameSettings; started_at: string | null; ends_at: string | null; winner: { id: string; name: string; avatar?: string | null } | null };
   me: {
     id: string; name: string; points: number; rank: number | null; answered: number; total: number; correct: number; streak: number;
     spins: number; power: GamePower | null; double_next: boolean; shield_until: string | null; frozen_until: string | null; team_id: string | null; finished: boolean;
+    avatar: string | null; hearts: number; max_hearts: number; out: boolean; helps: Record<GameHelp, number>;
   };
-  question: Omit<StudentQuestion, 'status'> & { total: number } | null;
+  question: Omit<StudentQuestion, 'status'> & { total: number; option_count?: number; fifty_used?: boolean; audience?: { id: string; pct: number }[] | null } | null;
   board: GameBoardRow[];
   teams: GameTeamRow[];
   events: GameEvent[];
 }
 
-export interface GameSubmitResult { status: 'accepted' | 'duplicate'; correct: boolean | null; gain: number; points: number; spin_earned: boolean; won: boolean; correct_text: string | null; explanation: string | null }
+export interface GameSubmitResult { status: 'accepted' | 'duplicate'; correct: boolean | null; gain: number; lost?: number; hearts?: number; out?: boolean; points: number; spin_earned: boolean; won: boolean; correct_text: string | null; explanation: string | null }
 export interface GameRollResult { number: number; kind: string; amount: number; points: number; spins: number; power: GamePower | null; won: boolean }
 export interface GamePowerResult { result: 'done' | 'blocked'; amount?: number; blocked?: number; points?: number; won?: boolean }
+
+export interface GameHelpResult { kind: GameHelp; hide?: string[]; votes?: { id: string; pct: number }[] }
+export interface GameBuyResult { item: ShopItem; price: number; points: number; hearts: number; helps: Record<GameHelp, number> }

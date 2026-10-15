@@ -6,7 +6,9 @@ import { Brand, Credit } from '@/components/Logo';
 import { Button, Card, ErrorBox, Field, Input, Spinner, cx } from '@/components/ui';
 import { OfflineBanner } from '@/components/feedback';
 import { FunBackdrop, LESSON_EMOJI, VIVID } from '@/components/fun';
-import { practice, student, type PracticePreview, type PublicPractice } from '@/lib/api';
+import { AvatarPicker } from '@/components/Avatar';
+import { saveAvatar, savedAvatar } from '@/lib/avatars';
+import { game, practice, student, type PracticePreview, type PublicPractice } from '@/lib/api';
 import { messageFor, toAppError } from '@/lib/errors';
 import { participantStore } from '@/hooks/useStudent';
 import { lastPracticeCode, rememberPracticeCode } from '@/lib/game';
@@ -24,6 +26,7 @@ export default function Practice() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [withFriends, setWithFriends] = useState(false);
+  const [avatar, setAvatar] = useState<string>(savedAvatar() ?? 'lion');
   // المعلمون الذين جعلوا تحدياتهم متاحة بدون رمز
   const [teachers, setTeachers] = useState<PublicPractice[] | null>(null);
   const [askCode, setAskCode] = useState(false);
@@ -58,11 +61,13 @@ export default function Practice() {
     return () => clearInterval(id);
   }, [loaded, code]);
 
-  const enter = (r: { participant_id: string; token: string; session_id: string; code: string; alias: string; display_name: string }) => {
+  const enter = async (r: { participant_id: string; token: string; session_id: string; code: string; alias: string; display_name: string }) => {
     try { localStorage.setItem(NAME_KEY, name.trim()); } catch { /* التخزين غير متاح */ }
     rememberPracticeCode(code);
+    saveAvatar(avatar);
     participantStore.clear();
-    participantStore.set(r);
+    participantStore.set({ ...r, avatar });
+    await game.setAvatar(r.participant_id, r.token, avatar).catch(() => {});
     nav('/play');
   };
 
@@ -75,7 +80,7 @@ export default function Practice() {
     setBusy(pick); setError(null);
     try {
       const r = await practice.start(code, pick, playerName(), withFriends);
-      if (!r.ok) setError(messageFor(r.error)); else enter(r);
+      if (!r.ok) setError(messageFor(r.error)); else await enter(r);
     } catch (e) { setError(toAppError(e).message); }
     finally { setBusy(null); }
   };
@@ -84,7 +89,7 @@ export default function Practice() {
     setBusy(roomCode); setError(null);
     try {
       const r = await student.join(roomCode, playerName(), null);
-      if (!r.ok) { setError(messageFor(r.error)); void load(code); } else enter(r);
+      if (!r.ok) { setError(messageFor(r.error)); void load(code); } else await enter(r);
     } catch (e) { setError(toAppError(e).message); }
     finally { setBusy(null); }
   };
@@ -140,6 +145,7 @@ export default function Practice() {
                 {title}
               </div>
               <Field label="اسمك (اختياري)"><Input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} autoComplete="name" className="text-lg" placeholder="بطل" /></Field>
+              <AvatarPicker value={avatar} onChange={setAvatar} />
               <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="طريقة اللعب">
                 {([[false, 'وحدي', User], [true, 'مع زملائي', Users]] as const).map(([v, label, Icon]) => (
                   <button key={label} type="button" role="radio" aria-checked={withFriends === v} onClick={() => setWithFriends(v)}

@@ -11,6 +11,7 @@ import { useChallenge } from '@/hooks/useChallenge';
 import { formatClock, goalText } from '@/lib/game';
 import { sfx } from '@/lib/sound';
 import NativeBack from '@/components/NativeBack';
+import { FunBackdrop } from '@/components/fun';
 
 export default function ChallengePresent({ id }: { id: string }) {
   const c = useChallenge(id);
@@ -39,7 +40,7 @@ export default function ChallengePresent({ id }: { id: string }) {
   const timeLeft = s.ends_at ? new Date(s.ends_at).getTime() - now : null;
 
   return (
-    <div className="min-h-dvh bg-ivory">
+    <FunBackdrop tone="light">
       <header className="flex items-center justify-between gap-4 bg-brand-800 px-6 py-3 text-white">
         <div className="flex items-center gap-3"><NativeBack /><Logo className="h-10 w-10" /><Trophy className="h-8 w-8 text-gold-300" /><span className="text-2xl font-extrabold">{s.title}</span></div>
         <div className="flex items-center gap-3">
@@ -64,6 +65,6 @@ export default function ChallengePresent({ id }: { id: string }) {
           </>
         )}
       </main>
-    </div>
+    </FunBackdrop>
   );
 }

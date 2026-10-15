@@ -6,24 +6,32 @@ import { cx } from './ui';
 const SYMBOLS = ['🏆', '⭐', '🎲', '💎', '🔥', '🛡️', '✨', '🚀', '🎯', '🌟', '💰', '⚡', '🎉', '👑', '🧠', '📚'];
 
 // مواقع ثابتة (لا عشوائية) حتى لا تقفز الرموز عند كل إعادة رسم
-const FLOATERS = Array.from({ length: 18 }, (_, i) => ({
+const FLOATERS = Array.from({ length: 16 }, (_, i) => ({
   s: SYMBOLS[i % SYMBOLS.length],
   left: (i * 37 + 7) % 100,
-  size: 22 + ((i * 13) % 26),
-  dur: 11 + ((i * 7) % 12),
-  delay: -((i * 23) % 20),
+  size: 20 + ((i * 13) % 22),
+  dur: 14 + ((i * 7) % 12),
+  delay: -((i * 23) % 24),
 }));
 
-export function FunBackdrop({ children }: { children: ReactNode }) {
+// خلفية اللعب: ألوان هادئة متدرجة (بنفسجي، أرجواني، أزرق مخضر) لا فاقعة
+// خلفية فاتحة (light) لصفحات المعلم وشاشة العرض حتى يبقى النص واضحًا
+const TONES = {
+  game: { bg: 'bg-[linear-gradient(135deg,#2e2a6b,#4b3f8f,#6b4a8c,#2f6b7c,#2e2a6b)]', blobs: ['bg-amber-200/20', 'bg-sky-300/20', 'bg-pink-300/20'], floatOpacity: 0.55, count: 16 },
+  light: { bg: 'bg-[linear-gradient(135deg,#fbf8f1,#efeafc,#e7f4ef,#fdf0f3,#fbf8f1)]', blobs: ['bg-amber-200/40', 'bg-violet-200/40', 'bg-emerald-200/40'], floatOpacity: 0.28, count: 10 },
+};
+
+export function FunBackdrop({ children, tone = 'game', className }: { children: ReactNode; tone?: keyof typeof TONES; className?: string }) {
+  const t = TONES[tone];
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-[linear-gradient(135deg,#4c1d95,#7c3aed,#db2777,#f97316,#0ea5e9,#4c1d95)] bg-[length:400%_400%] motion-safe:animate-hue">
+    <div className={cx('relative min-h-dvh bg-[length:400%_400%] motion-safe:animate-hue', t.bg, className)}>
       <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-yellow-300/40 blur-3xl motion-safe:animate-drift" />
-        <div className="absolute -left-20 top-1/3 h-96 w-96 rounded-full bg-cyan-300/30 blur-3xl motion-safe:animate-drift [animation-delay:-3s]" />
-        <div className="absolute bottom-0 right-1/4 h-72 w-72 rounded-full bg-pink-400/40 blur-3xl motion-safe:animate-drift [animation-delay:-6s]" />
-        {FLOATERS.map((f, i) => (
+        <div className={cx('absolute -right-24 -top-24 h-80 w-80 rounded-full blur-3xl motion-safe:animate-drift', t.blobs[0])} />
+        <div className={cx('absolute -left-20 top-1/3 h-96 w-96 rounded-full blur-3xl motion-safe:animate-drift [animation-delay:-3s]', t.blobs[1])} />
+        <div className={cx('absolute bottom-0 right-1/4 h-72 w-72 rounded-full blur-3xl motion-safe:animate-drift [animation-delay:-6s]', t.blobs[2])} />
+        {FLOATERS.slice(0, t.count).map((f, i) => (
           <span key={i} className="absolute bottom-[-60px] select-none motion-reduce:hidden"
-            style={{ left: `${f.left}%`, fontSize: f.size, animation: `floatUp ${f.dur}s linear ${f.delay}s infinite` }}>{f.s}</span>
+            style={{ left: `${f.left}%`, fontSize: f.size, '--o': t.floatOpacity, animation: `floatUp ${f.dur}s linear ${f.delay}s infinite` } as CSSProperties}>{f.s}</span>
         ))}
       </div>
       <div className="relative z-10">{children}</div>
@@ -85,12 +93,12 @@ export function useBump(value: unknown): string {
 
 // ألوان زاهية متناوبة للبطاقات والإحصاءات
 export const VIVID = [
+  'from-violet-500 to-indigo-600',
+  'from-amber-400 to-orange-500',
+  'from-sky-500 to-cyan-600',
+  'from-emerald-500 to-teal-600',
+  'from-rose-400 to-pink-500',
   'from-fuchsia-500 to-purple-600',
-  'from-orange-400 to-pink-500',
-  'from-cyan-400 to-blue-600',
-  'from-lime-400 to-emerald-600',
-  'from-yellow-400 to-orange-500',
-  'from-rose-400 to-red-600',
 ];
 export const LESSON_EMOJI = ['📘', '🌙', '🕌', '⭐', '🌿', '💡', '🎯', '📜', '🌟', '🧭'];
 
