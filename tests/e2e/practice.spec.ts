@@ -44,6 +44,10 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   await t.getByRole('button', { name: 'تحليل النص الملصق' }).click();
   await t.getByRole('button', { name: 'استيراد 4 سؤال' }).click();
   await expect(t.getByRole('button', { name: 'الذهاب إلى بنك الأسئلة' })).toBeVisible();
+  // المعلم يضيف الألغاز والأسئلة العامة الجاهزة بضغطة واحدة
+  await t.goto('/t/bank');
+  await t.getByTestId('starter-pack').click();
+  await expect(t.getByText(/أضيف \d+ سؤالًا جاهزًا/)).toBeVisible();
 
   // المعلم يفعّل الرابط مرة واحدة فقط
   await t.goto('/t/challenge/new');
@@ -116,4 +120,21 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   // النتائج تصل إلى المعلم
   await t.goto('/t');
   await expect(t.getByText('تحدي ذاتي: الأخلاق').first()).toBeVisible();
+
+  // منافسة بأكثر من درس: الطالب يحدد الألغاز والمعلومات العامة ثم يبدأ
+  const multi = await phone(browser);
+  await multi.goto(`/practice/${code}`);
+  await multi.getByLabel('اسمك (اختياري)').fill('نورة');
+  await multi.getByTestId('multi-lessons').click();
+  await expect(multi.getByTestId('start-many')).toBeDisabled();
+  await multi.getByTestId('lesson').filter({ hasText: 'ألغاز' }).click();
+  await multi.getByTestId('lesson').filter({ hasText: 'معلومات عامة' }).click();
+  await shot(multi, '46-multi-lessons');
+  await multi.getByTestId('start-many').click();
+  await expect(multi.getByText(/السؤال 1 من \d+/)).toBeVisible({ timeout: 10000 });
+  await expect(multi.getByText('تحدي ذاتي: ألغاز + معلومات عامة')).toBeVisible();
+  await shot(multi, '47-riddle-game');
+  // زر الرئيسية موجود داخل اللعبة ويعيد إلى الصفحة الرئيسية
+  await multi.getByTestId('home-button').click();
+  await expect(multi).toHaveURL(/\/$/);
 });

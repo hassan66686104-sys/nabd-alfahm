@@ -1,5 +1,6 @@
 // «تحدي الكأس» من جهة الطالب: أسئلة متتالية دون انتظار المعلم، نقاط، رقم الحظ، وقدرات
 import { useCallback, useEffect, useRef, useState } from 'react';
+import HomeButton from '@/components/HomeButton';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Dices, Flag, Loader2, Shield, Snowflake, Star, Timer, Trophy, XCircle, Zap } from 'lucide-react';
 import { Logo, Credit } from '@/components/Logo';
@@ -286,6 +287,7 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
         {hearts}
         <span className={cx('inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-yellow-300 to-orange-400 px-3 py-1 text-sm font-extrabold text-purple-950 shadow-lg', pointsBump)}><Star className="h-4 w-4 fill-current motion-safe:animate-spin [animation-duration:4s]" /><span data-testid="my-points">{me.points}</span> نقطة</span>
         <SoundToggle className="text-white" />
+        <HomeButton />
       </div>
     </div>
   );

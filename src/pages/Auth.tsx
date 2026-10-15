@@ -1,4 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
+import HomeButton from '@/components/HomeButton';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { Brand, Credit } from '@/components/Logo';
 import { Button, Card, ErrorBox, Field, Input } from '@/components/ui';
@@ -13,7 +14,11 @@ function Shell({ title, children, footer }: { title: string; children: ReactNode
   return (
     <FunBackdrop tone="light"><div className="flex min-h-dvh items-center justify-center px-4 py-10">
       <div className="w-full max-w-md space-y-5">
-        <Link to="/" className="flex justify-center"><Brand /></Link>
+        <div className="flex items-center justify-between gap-2">
+          <HomeButton tone="light" />
+          <Link to="/"><Brand /></Link>
+          <span className="w-10 sm:w-24" aria-hidden />
+        </div>
         <Card className="space-y-4 p-6">
           <h1 className="text-2xl font-extrabold">{title}</h1>
           {children}

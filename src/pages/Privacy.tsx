@@ -1,5 +1,6 @@
 // سياسة الخصوصية: صفحة عامة يُشار إليها في متجر App Store وداخل التطبيق
 import { Link } from 'react-router-dom';
+import HomeButton from '@/components/HomeButton';
 import { Brand, Credit } from '@/components/Logo';
 import { Card } from '@/components/ui';
 import { FunBackdrop } from '@/components/fun';
@@ -61,7 +62,7 @@ export default function Privacy() {
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-8">
         <div className="flex items-center justify-between">
           <Link to="/" className="rounded-2xl bg-white px-3 py-2 shadow"><Brand /></Link>
-          <Link to="/" className="font-semibold text-brand-700 underline">الرئيسية</Link>
+          <HomeButton tone="light" />
         </div>
         <Card className="space-y-5 p-6">
           <div>

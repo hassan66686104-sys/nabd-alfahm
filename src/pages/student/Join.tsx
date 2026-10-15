@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import HomeButton from '@/components/HomeButton';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Brand, Credit } from '@/components/Logo';
 import { Button, Card, ErrorBox, Field, Input, cx } from '@/components/ui';
@@ -64,7 +65,11 @@ export default function Join() {
     <FunBackdrop>
       <OfflineBanner />
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-8 lg:max-w-2xl">
-        <div className="mx-auto animate-bounceIn rounded-2xl bg-white px-3 py-2 shadow-xl"><Brand /></div>
+        <div className="flex items-center justify-between gap-2">
+          <HomeButton />
+          <div className="animate-bounceIn rounded-2xl bg-white px-3 py-2 shadow-xl"><Brand /></div>
+          <span className="w-10 sm:w-24" aria-hidden />
+        </div>
         <Card className="animate-bounceIn space-y-4 p-6 shadow-2xl">
           {!preview ? (
             <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void lookup(code); }}>

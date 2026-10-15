@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import HomeButton from '@/components/HomeButton';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { CheckCircle2, CloudOff, Coffee, Loader2, PartyPopper, Star, XCircle } from 'lucide-react';
 import { Logo, Credit } from '@/components/Logo';
@@ -77,6 +78,7 @@ export default function Play() {
       <div className="flex items-center gap-2">
         {state.session.leaderboard_enabled && state.me.points != null && <Badge tone="gold"><Star className="h-3.5 w-3.5" />{Number(state.me.points)} نقطة</Badge>}
         <SoundToggle className="text-white" />
+        <HomeButton />
         <span className={cx('h-2.5 w-2.5 rounded-full', transient ? 'bg-amber-400' : live ? 'animate-pulseDot bg-green-400' : 'bg-brand-300')} title={live ? 'متصل لحظيًا' : 'تحديث دوري'} />
       </div>
     </div>

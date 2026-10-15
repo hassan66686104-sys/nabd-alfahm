@@ -1,5 +1,6 @@
 // التحدي الذاتي: الطالب يدخل الموقع، يختار الدرس، ويبدأ فورًا وحده أو مع زملائه دون رمز ولا تدخل المعلم
 import { useEffect, useState, type FormEvent } from 'react';
+import HomeButton from '@/components/HomeButton';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Loader2, RefreshCw, Trophy, User, Users } from 'lucide-react';
 import { Brand, Credit } from '@/components/Logo';
@@ -22,6 +23,9 @@ export default function Practice() {
   const [code, setCode] = useState(params.code ?? lastPracticeCode() ?? '');
   const [data, setData] = useState<PracticePreview | null>(null);
   const [lesson, setLesson] = useState('');
+  // «أكثر من درس»: يحدد الطالب الدروس ثم يبدأ منافسة واحدة تخلط أسئلتها
+  const [multi, setMulti] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
   const [name, setName] = useState(readName);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -74,12 +78,17 @@ export default function Practice() {
   // الاسم اختياري: من لا يكتب اسمه يلعب باسم «بطل»
   const playerName = () => (name.trim().length >= 2 ? name.trim() : 'بطل');
 
-  // الضغط على الدرس يبدأ التحدي مباشرة
-  const start = async (pick: string) => {
-    setLesson(pick);
-    setBusy(pick); setError(null);
+  // الضغط على الدرس يبدأ التحدي مباشرة، وفي «أكثر من درس» يحدده فقط
+  const tapLesson = (l: string) => {
+    if (!multi) return void start([l]);
+    setPicked((cur) => cur.includes(l) ? cur.filter((x) => x !== l) : [...cur, l]);
+  };
+  const start = async (pick: string[]) => {
+    const key = pick.length === 1 ? pick[0] : 'many';
+    setLesson(key);
+    setBusy(key); setError(null);
     try {
-      const r = await practice.start(code, pick, playerName(), withFriends);
+      const r = await practice.startMany(code, pick, playerName(), withFriends);
       if (!r.ok) setError(messageFor(r.error)); else await enter(r);
     } catch (e) { setError(toAppError(e).message); }
     finally { setBusy(null); }
@@ -115,7 +124,11 @@ export default function Practice() {
     <FunBackdrop>
       <OfflineBanner />
       <div className="mx-auto flex w-full max-w-lg flex-col gap-4 px-4 py-8 lg:max-w-none lg:px-8">
-        <div className="mx-auto animate-bounceIn rounded-2xl bg-white px-3 py-2 shadow-xl"><Brand /></div>
+        <div className="flex items-center justify-between gap-2">
+          <HomeButton />
+          <div className="animate-bounceIn rounded-2xl bg-white px-3 py-2 shadow-xl"><Brand /></div>
+          <span className="w-10 sm:w-24" aria-hidden />
+        </div>
         {!data ? (
           <Card className="mx-auto w-full max-w-xl animate-bounceIn space-y-4 p-6 shadow-2xl">
             {title}
@@ -155,18 +168,33 @@ export default function Practice() {
                 ))}
               </div>
               <div>
-                <div className="mb-2 font-bold text-purple-800">👇 اضغط على الدرس ليبدأ التحدي</div>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="font-bold text-purple-800">{multi ? '👇 حدد الدروس ثم اضغط «ابدأ»' : '👇 اضغط على الدرس ليبدأ التحدي'}</div>
+                  {data.lessons.length > 1 && (
+                    <button type="button" role="switch" aria-checked={multi} onClick={() => { setMulti((m) => !m); setPicked([]); }} data-testid="multi-lessons"
+                      className={cx('rounded-full border-2 px-3 py-1 text-sm font-bold transition', multi ? 'border-transparent bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow' : 'border-purple-200 text-purple-800 hover:bg-purple-50')}>
+                      🧩 أكثر من درس
+                    </button>
+                  )}
+                </div>
                 {data.lessons.length === 0 ? <p className="rounded-xl bg-ivory-100 p-3 text-brand-700">لا توجد دروس جاهزة بعد. اطلب من معلمك إضافة أسئلة للدروس.</p> : (
                   <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" aria-label="الدروس">
                     {data.lessons.map((l, i) => (
-                      <button key={l.lesson} type="button" disabled={!!busy} onClick={() => start(l.lesson)} data-testid="lesson"
+                      <button key={l.lesson} type="button" disabled={!!busy} onClick={() => tapLesson(l.lesson)} data-testid="lesson"
+                        aria-pressed={multi ? picked.includes(l.lesson) : undefined}
                         style={{ animationDelay: `${i * 60}ms` }}
-                        className={cx('group flex animate-bounceIn items-center [animation-fill-mode:both] justify-between gap-2 rounded-2xl bg-gradient-to-br p-3 text-start font-extrabold text-white shadow-lg ring-2 ring-white/40 transition hover:-translate-y-1 hover:scale-[1.03] hover:shadow-2xl disabled:opacity-60', VIVID[i % VIVID.length], lesson === l.lesson && busy && 'ring-4 ring-yellow-300')}>
-                        <span className="flex items-center gap-2 drop-shadow"><span className="text-2xl transition group-hover:animate-wiggle">{LESSON_EMOJI[i % LESSON_EMOJI.length]}</span>{l.lesson}</span>
+                        className={cx('group flex animate-bounceIn items-center [animation-fill-mode:both] justify-between gap-2 rounded-2xl bg-gradient-to-br p-3 text-start font-extrabold text-white shadow-lg ring-2 ring-white/40 transition hover:-translate-y-1 hover:scale-[1.03] hover:shadow-2xl disabled:opacity-60', VIVID[i % VIVID.length], lesson === l.lesson && busy && 'ring-4 ring-yellow-300', multi && picked.includes(l.lesson) && 'ring-4 ring-yellow-300', multi && !picked.includes(l.lesson) && 'opacity-80')}>
+                        <span className="flex items-center gap-2 drop-shadow"><span className="text-2xl transition group-hover:animate-wiggle">{multi ? (picked.includes(l.lesson) ? '✅' : '⬜') : LESSON_EMOJI[i % LESSON_EMOJI.length]}</span>{l.lesson}</span>
                         {busy === l.lesson ? <Loader2 className="h-5 w-5 shrink-0 animate-spin" aria-label="جارٍ البدء" /> : <span className="shrink-0 rounded-full bg-white/25 px-2 py-0.5 text-xs font-bold">{l.count} سؤال</span>}
                       </button>
                     ))}
                   </div>
+                )}
+                {multi && (
+                  <Button size="lg" variant="gold" className="mt-3 w-full" disabled={picked.length < 2 || !!busy} loading={busy === 'many'}
+                    onClick={() => start(picked)} data-testid="start-many">
+                    {picked.length < 2 ? 'حدد درسين على الأقل' : picked.length === 2 ? 'ابدأ المنافسة بدرسين' : `ابدأ المنافسة بـ ${picked.length} دروس`}
+                  </Button>
                 )}
               </div>
               {error && <ErrorBox error={error} />}

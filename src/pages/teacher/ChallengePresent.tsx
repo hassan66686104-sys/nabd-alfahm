@@ -1,5 +1,6 @@
 // شاشة العرض لـ«تحدي الكأس»: الترتيب المباشر والأحداث والعد التنازلي ثم منصة الفائزين
 import { useEffect, useRef } from 'react';
+import HomeButton from '@/components/HomeButton';
 import { Expand, Timer, Trophy } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { ErrorBox, Spinner } from '@/components/ui';
@@ -46,6 +47,7 @@ export default function ChallengePresent({ id }: { id: string }) {
         <div className="flex items-center gap-3">
           {s.status === 'live' && timeLeft != null && <span className="flex items-center gap-2 rounded-xl bg-white/15 px-4 py-1 text-3xl font-extrabold tabular-nums"><Timer className="h-7 w-7" />{formatClock(timeLeft)}</span>}
           <SoundToggle />
+          <HomeButton to="/t" />
           <button onClick={() => void document.documentElement.requestFullscreen?.().catch(() => {})} className="rounded-lg p-2 hover:bg-white/10" aria-label="ملء الشاشة"><Expand className="h-6 w-6" /></button>
         </div>
       </header>

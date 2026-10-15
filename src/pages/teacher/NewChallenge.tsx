@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dices, LibraryBig, Timer, Trash2, Trophy, Users } from 'lucide-react';
-import { Badge, Button, Card, ErrorBox, Field, Input, PageHeader, Select, Toggle, cx } from '@/components/ui';
+import { Badge, Button, Card, ErrorBox, Field, Input, PageHeader, Toggle, cx } from '@/components/ui';
 import QuestionPicker from '@/components/QuestionPicker';
 import PracticeLinkCard from '@/components/PracticeLinkCard';
 import { useFeedback } from '@/components/feedback';
@@ -13,15 +13,16 @@ import { luckTable } from '@/lib/game';
 import { useSettings } from '@/hooks/useAuth';
 import type { Question } from '@/lib/types';
 
-// الأسئلة المفتوحة تحتاج تصحيح المعلم، فلا تصلح للعب الذاتي السريع
-const playable = (q: Question) => q.answer_format !== 'open' && !q.answer_key?.poll;
+// الأسئلة التي تحتاج كتابة (مفتوحة، قصيرة، ملء فراغ) لا تدخل التحدي؛ يجيب الطالب بالضغط فقط
+const TYPED = ['open', 'short', 'blanks'];
+const playable = (q: Question) => !TYPED.includes(q.answer_format) && !q.answer_key?.poll;
 
 export default function NewChallenge() {
   const settings = useSettings();
   const nav = useNavigate();
   const { toast } = useFeedback();
   const [bank, setBank] = useState<Question[] | null>(null);
-  const [lesson, setLesson] = useState('');
+  const [chosen, setChosen] = useState<string[]>([]);
   const [title, setTitle] = useState('');
   const [items, setItems] = useState<Question[]>([]);
   const [end, setEnd] = useState<'target' | 'time'>('target');
@@ -42,12 +43,15 @@ export default function NewChallenge() {
   useEffect(() => { listQuestions({ limit: 300 }).then(setBank).catch((e) => setError(toAppError(e).message)); }, []);
   const lessons = useMemo(() => [...new Set((bank ?? []).filter(playable).map((q) => q.lesson.trim()).filter(Boolean))].sort(), [bank]);
 
-  const addLesson = (l: string) => {
-    setLesson(l);
-    if (!l || !bank) return;
+  // اختيار درس أو أكثر: الضغط يضيف أسئلة الدرس، والضغط مرة أخرى يزيلها
+  const toggleLesson = (l: string) => {
+    if (!bank) return;
+    const on = !chosen.includes(l);
+    const next = on ? [...chosen, l] : chosen.filter((x) => x !== l);
+    setChosen(next);
     const qs = bank.filter((q) => playable(q) && q.lesson.trim() === l);
-    setItems((cur) => [...cur, ...qs.filter((q) => !cur.some((c) => c.id === q.id))]);
-    if (!title.trim()) setTitle(`تحدي الكأس: ${l}`);
+    setItems((cur) => on ? [...cur, ...qs.filter((q) => !cur.some((c) => c.id === q.id))] : cur.filter((c) => c.lesson.trim() !== l));
+    if (!title.trim() || title.startsWith('تحدي الكأس: ')) setTitle(next.length ? `تحدي الكأس: ${next.join(' + ')}`.slice(0, 120) : '');
   };
 
   const create = async () => {
@@ -62,7 +66,7 @@ export default function NewChallenge() {
     setBusy(true);
     try {
       const s = await createSession({
-        title: title.trim(), class_id: null, subject_id: items[0]?.subject_id ?? null, grade: items[0]?.grade ?? '', unit: items[0]?.unit ?? '', lesson: lesson || items[0]?.lesson || '',
+        title: title.trim(), class_id: null, subject_id: items[0]?.subject_id ?? null, grade: items[0]?.grade ?? '', unit: items[0]?.unit ?? '', lesson: (chosen.join(' + ') || items[0]?.lesson || '').slice(0, 160),
         anonymous, hide_names: hideNames, hide_results: false, leaderboard_enabled: true, teams_enabled: teamsOn, auto_approve_open: false,
         mode: 'self',
         game: { end, ...(end === 'target' ? { target: t } : { minutes: m }), powers, hearts: heartsOn ? 3 : 0, helps: helpsOn, ...(prize.trim() ? { prize: prize.trim().slice(0, 80) } : {}) },
@@ -87,12 +91,21 @@ export default function NewChallenge() {
       <Card className="space-y-3">
         <h2 className="text-lg font-bold">1. الدرس والأسئلة <Badge>{items.length}</Badge></h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="اختر الدرس" hint="تُضاف كل أسئلة الدرس من بنك الأسئلة">
-            <Select value={lesson} onChange={(e) => addLesson(e.target.value)} aria-label="اختر الدرس">
-              <option value="">— اختر درسًا —</option>
-              {lessons.map((l) => <option key={l} value={l}>{l}</option>)}
-            </Select>
-          </Field>
+          <div className="sm:col-span-2">
+            <div className="mb-1 font-semibold">اختر درسًا أو أكثر</div>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="الدروس" data-testid="challenge-lessons">
+              {lessons.map((l) => {
+                const on = chosen.includes(l);
+                return (
+                  <button key={l} type="button" aria-pressed={on} onClick={() => toggleLesson(l)}
+                    className={cx('rounded-full border-2 px-3 py-1.5 font-bold transition', on ? 'border-transparent bg-gradient-to-r from-violet-500 to-indigo-600 text-white shadow' : 'border-brand-100 bg-white text-brand-800 hover:bg-brand-50')}>
+                    {on ? '✓ ' : ''}{l}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-sm text-brand-600">تُضاف كل أسئلة الدروس المختارة وتُخلط في تحدٍّ واحد.</p>
+          </div>
           <Field label="اسم التحدي"><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="مثال: تحدي الكأس — الصدق" /></Field>
         </div>
         <Button variant="outline" icon={<LibraryBig className="h-5 w-5" />} onClick={() => setPicker(true)}>اختيار أسئلة من البنك</Button>
@@ -107,7 +120,7 @@ export default function NewChallenge() {
             </div>
           ))}
         </div>
-        <p className="text-sm text-brand-600">الأسئلة المفتوحة لا تُضاف لأنها تحتاج تصحيح المعلم. يظهر كل سؤال لكل طالب بترتيب مختلف.</p>
+        <p className="text-sm text-brand-600">الأسئلة التي تحتاج كتابة (المفتوحة والقصيرة وملء الفراغ) لا تُضاف، فالطالب يجيب بالضغط فقط. يظهر كل سؤال لكل طالب بترتيب مختلف.</p>
       </Card>
 
       <Card className="space-y-3">
@@ -164,7 +177,7 @@ export default function NewChallenge() {
       </div>
 
       <QuestionPicker open={picker} onClose={() => setPicker(false)} exclude={items.map((q) => q.id)}
-        onPick={(qs) => { const ok = qs.filter(playable); if (ok.length < qs.length) toast('لم تُضف الأسئلة المفتوحة'); setItems((l) => [...l, ...ok]); }} />
+        onPick={(qs) => { const ok = qs.filter(playable); if (ok.length < qs.length) toast('لم تُضف الأسئلة التي تحتاج كتابة'); setItems((l) => [...l, ...ok]); }} />
     </div>
   );
 }

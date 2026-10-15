@@ -717,3 +717,38 @@ test('تحدي الكأس: القلوب والعقوبة ووسائل المسا
   assert.equal(g.session.status, 'ended');
   assert.equal(g.events.some((e) => e.kind === 'out'), true);
 });
+
+test('منافسة بعدة دروس، واستبعاد الأسئلة الكتابية، والأسئلة الجاهزة', async () => {
+  const link = (await A('select code from practice_links')).rows[0];
+  await A('update practice_links set enabled=true');
+  // الأسئلة الكتابية لا تدخل التحدي ولا تُحسب في عدد أسئلة الدرس
+  const before = (await anon('select public.practice_lookup($1) as r', [link.code], '10.9.2.1')).rows[0].r.lessons.find((l) => l.lesson === 'الكواكب').count;
+  await saveQ(A, { type: 'short_answer', answer_format: 'short', text: 'اكتب اسم أقرب كوكب للشمس', lesson: 'الكواكب', answer_key: { accepted: ['عطارد'] } });
+  await saveQ(A, { type: 'fill_blank', answer_format: 'blanks', text: 'أكبر كوكب هو ___', lesson: 'الكواكب', answer_key: { blanks: [['المشتري']] } });
+  const look = (await anon('select public.practice_lookup($1) as r', [link.code], '10.9.2.1')).rows[0].r;
+  assert.equal(look.lessons.find((l) => l.lesson === 'الكواكب').count, before);
+
+  // درسان معًا في تحدٍّ واحد
+  const r = (await anon('select public.practice_start_many($1,$2::text[],$3,false) as r', [link.code, ['الكواكب', 'العواصم'], 'ريم'], '10.9.2.2')).rows[0].r;
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const s = (await as('postgres', null, 'select lesson, status from sessions where id=$1', [r.session_id])).rows[0];
+  assert.equal(s.lesson, 'العواصم + الكواكب');
+  assert.equal(s.status, 'live');
+  const fmts = (await as('postgres', null, `select distinct q.lesson, q.answer_format::text f from session_questions sq join questions q on q.id = sq.question_id where sq.session_id=$1`, [r.session_id])).rows;
+  assert.deepEqual([...new Set(fmts.map((x) => x.lesson))].sort(), ['العواصم', 'الكواكب']);
+  assert.equal(fmts.some((x) => ['short', 'open', 'blanks'].includes(x.f)), false);
+  assert.equal((await anon('select public.practice_start_many($1,$2::text[],$3,false) as r', [link.code, ['غير موجود'], 'ريم'], '10.9.2.2')).rows[0].r.error, 'LESSON_NOT_FOUND');
+
+  // الحزمة الجاهزة: تُضاف مرة واحدة، وكل أسئلتها صالحة وبإجابة صحيحة واحدة
+  await assert.rejects(anon('select public.add_starter_pack()'), /permission denied/);
+  const added = (await A('select public.add_starter_pack() as r')).rows[0].r;
+  assert.equal(added.ok, true);
+  assert.ok(added.added >= 55);
+  assert.equal((await A('select public.add_starter_pack() as r')).rows[0].r.added, 0);
+  const bad = (await A(`select count(*)::int n from questions where 'جاهز' = any(tags) and public.question_problem(public.build_snapshot(id)) is not null`)).rows[0].n;
+  assert.equal(bad, 0);
+  const pos = (await A(`select count(distinct o.position)::int n from questions q join question_options o on o.question_id = q.id and o.is_correct where q.type = 'mcq' and 'جاهز' = any(q.tags)`)).rows[0].n;
+  assert.equal(pos, 4, 'الإجابة الصحيحة ليست دائمًا في الموضع نفسه');
+  const lessons = (await anon('select public.practice_lookup($1) as r', [link.code], '10.9.2.1')).rows[0].r.lessons.map((l) => l.lesson);
+  for (const l of ['ألغاز', 'معلومات عامة', 'ثقافة إسلامية']) assert.ok(lessons.includes(l), l);
+});

@@ -1,5 +1,6 @@
 // شاشة العرض للصف (جهاز العرض): خط كبير، بلا أسماء حقيقية افتراضيًا، والنتائج حسب قرار المعلم
 import { useMemo, useState } from 'react';
+import HomeButton from '@/components/HomeButton';
 import { useParams } from 'react-router-dom';
 import { Expand, Users } from 'lucide-react';
 import { Logo } from '@/components/Logo';
@@ -45,6 +46,7 @@ export default function Present() {
         <div className="flex items-center gap-6 text-2xl font-bold">
           {sq && <span dir="ltr" className="font-mono tracking-widest text-gold-300">{session.code}</span>}
           <span className="flex items-center gap-2"><Users className="h-7 w-7" />{active.length}</span>
+          <HomeButton to="/t" />
           <button onClick={fullscreen} className="rounded-lg p-2 hover:bg-brand-700" aria-label="ملء الشاشة"><Expand className="h-6 w-6" /></button>
         </div>
       </header>

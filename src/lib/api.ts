@@ -114,6 +114,9 @@ export interface QuestionFilters {
 
 const escLike = (s: string) => s.replace(/[%_,()*\\]/g, ' ').trim();
 
+// يضيف إلى بنك المعلم ألغازًا ومعلومات عامة وثقافة إسلامية جاهزة (اختيار من متعدد وصح وخطأ)
+export const addStarterPack = () => run(supabase.rpc('add_starter_pack')) as Promise<{ ok: boolean; added: number; error?: string }>;
+
 export async function listQuestions(f: QuestionFilters = {}): Promise<Question[]> {
   let q = supabase.from('questions').select('*, question_options(id,position,text,match_text,is_correct)').order('updated_at', { ascending: false }).limit(f.limit ?? 300);
   if (f.subject_id) q = q.eq('subject_id', f.subject_id);
@@ -340,5 +343,8 @@ export const practice = {
   lookup: (code: string) => run(supabase.rpc('practice_lookup', { p_code: code })) as Promise<StudentResult<PracticePreview>>,
   start: (code: string, lesson: string, name: string, withFriends: boolean) =>
     run(supabase.rpc('practice_start', { p_code: code, p_lesson: lesson, p_name: name, p_with_friends: withFriends })) as Promise<StudentResult<JoinResult>>,
+  // درس واحد أو عدة دروس تُخلط أسئلتها في تحدٍّ واحد
+  startMany: (code: string, lessons: string[], name: string, withFriends: boolean) =>
+    run(supabase.rpc('practice_start_many', { p_code: code, p_lessons: lessons, p_name: name, p_with_friends: withFriends })) as Promise<StudentResult<JoinResult>>,
   begin: (participantId: string, token: string) => run(supabase.rpc('practice_begin', { p_participant: participantId, p_token: token })) as Promise<StudentResult<object>>,
 };

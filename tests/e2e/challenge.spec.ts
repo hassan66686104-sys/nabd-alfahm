@@ -49,7 +49,7 @@ test('تحدي الكأس: لعب ذاتي ورقم الحظ والفوز بال
   await t.goto('/t');
   await t.getByTestId('challenge-banner').click();
   await expect(t).toHaveURL(/\/t\/challenge\/new$/);
-  await t.getByLabel('اختر الدرس').selectOption('الكواكب');
+  await t.getByTestId('challenge-lessons').getByRole('button', { name: 'الكواكب' }).click();
   await expect(t.getByText('المشتري أكبر الكواكب')).toBeVisible();
   await t.getByLabel('النقاط المطلوبة للكأس').fill('50');
   await t.getByLabel('الجائزة (اختياري)').fill('كأس الفصل');

@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Copy, Filter, Heart, LibraryBig, Pencil, PlayCircle, Plus, Trash2 } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, ErrorBox, Input, PageHeader, Select, Spinner, cx } from '@/components/ui';
 import { useFeedback } from '@/components/feedback';
-import { deleteQuestion, duplicateQuestion, listQuestions, setFavorite, subjects as subjectsApi, type QuestionFilters } from '@/lib/api';
+import { addStarterPack, deleteQuestion, duplicateQuestion, listQuestions, setFavorite, subjects as subjectsApi, type QuestionFilters } from '@/lib/api';
 import { toAppError } from '@/lib/errors';
 import { BLOOM, DIFFICULTY, ISLAMIC_DOMAINS, QUESTION_TYPES, bloomLabel, difficultyLabel, typeLabel } from '@/lib/constants';
 import type { Question, Subject } from '@/lib/types';
@@ -17,6 +17,7 @@ export default function QuestionBank() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
+  const [adding, setAdding] = useState(false);
 
   const filters: QuestionFilters = useMemo(() => ({
     search: params.get('q') ?? '', subject_id: params.get('subject') ?? '', grade: params.get('grade') ?? '', lesson: params.get('lesson') ?? '',
@@ -47,12 +48,24 @@ export default function QuestionBank() {
     try { await fn(); toast(okMsg); await load(); } catch (e) { toast(toAppError(e).message, 'error'); }
   };
 
+  // الأسئلة الجاهزة تُضاف مرة واحدة، والضغط مرة أخرى لا يكررها
+  const addPack = async () => {
+    setAdding(true);
+    try {
+      const r = await addStarterPack();
+      if (!r.ok) toast('تعذرت إضافة الأسئلة الجاهزة', 'error');
+      else { toast(r.added ? `أضيف ${r.added} سؤالًا جاهزًا: ألغاز، ومعلومات عامة، وثقافة إسلامية` : 'الأسئلة الجاهزة موجودة في بنكك من قبل'); await load(); }
+    } catch (e) { toast(toAppError(e).message, 'error'); }
+    finally { setAdding(false); }
+  };
+
   return (
     <div className="space-y-4">
       <PageHeader
         title={filters.favorites ? 'الأسئلة المفضلة' : 'بنك الأسئلة'}
         subtitle={items ? `${items.length} سؤال` : undefined}
         actions={<>
+          <Button variant="gold" loading={adding} onClick={addPack} data-testid="starter-pack">🧩 ألغاز وأسئلة عامة جاهزة</Button>
           <Button variant="outline" onClick={() => nav('/t/import')}>استيراد</Button>
           <Button icon={<Plus className="h-5 w-5" />} onClick={() => nav('/t/bank/new')}>سؤال جديد</Button>
         </>}
