@@ -22,7 +22,9 @@ async function answerAll(p: Page) {
     await expect(p.getByText(`السؤال ${n} من 4`)).toBeVisible({ timeout: 10000 });
     await p.getByRole('radio', { name: /صح/ }).click();
     await p.getByRole('button', { name: 'إرسال الإجابة' }).click();
-    await expect(p.getByText(/صحيحة! \+/)).toBeVisible();
+    // بعد آخر إجابة قد ينتهي التحدي فورًا فتظهر منصة الفائز بدل رسالة الإجابة
+    const feedback = p.getByText(/صحيحة! \+/);
+    await expect(n < 4 ? feedback : feedback.or(p.getByTestId('game-winner'))).toBeVisible();
   }
 }
 

@@ -18,6 +18,7 @@ function Shell({ title, children, footer }: { title: string; children: ReactNode
           {children}
         </Card>
         {footer && <div className="text-center text-brand-700">{footer}</div>}
+        <p className="text-center text-sm"><Link to="/privacy" className="text-brand-600 underline">سياسة الخصوصية</Link></p>
         <Credit />
       </div>
     </div>

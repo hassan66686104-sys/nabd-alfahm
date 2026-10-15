@@ -11,6 +11,7 @@ import { useChallenge } from '@/hooks/useChallenge';
 import { game } from '@/lib/api';
 import { toAppError } from '@/lib/errors';
 import { formatClock, goalText } from '@/lib/game';
+import { openPresent } from '@/lib/native';
 
 export default function ChallengeLive() {
   const { id } = useParams();
@@ -57,7 +58,7 @@ export default function ChallengeLive() {
         title={<span className="flex items-center gap-2"><Trophy className="h-7 w-7 text-gold-400" />{s.title}</span>}
         subtitle={<>{goalText(s.game)}{s.game.prize && <> · الجائزة: <b>{s.game.prize}</b></>}</>}
         actions={<>
-          <Button variant="outline" icon={<MonitorPlay className="h-5 w-5" />} onClick={() => window.open(`/present/${s.id}`, '_blank', 'noopener')}>شاشة العرض</Button>
+          <Button variant="outline" icon={<MonitorPlay className="h-5 w-5" />} onClick={() => openPresent(s.id, nav)}>شاشة العرض</Button>
           {s.status === 'lobby' && <Button variant="gold" icon={<PlayCircle className="h-5 w-5" />} loading={busy} onClick={start}>ابدأ التحدي</Button>}
           {s.status === 'live' && <Button variant="danger" icon={<Square className="h-5 w-5" />} loading={busy} onClick={finish}>إنهاء التحدي</Button>}
           {s.status === 'ended' && <Button icon={<BarChart3 className="h-5 w-5" />} onClick={() => nav(`/t/reports/${s.id}`)}>تقرير الفهم</Button>}

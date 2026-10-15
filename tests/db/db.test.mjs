@@ -598,3 +598,21 @@ test('التحدي الذاتي: الطالب يختار الدرس ويبدأ �
   await A('update practice_links set enabled=false');
   assert.equal((await anon('select public.practice_lookup($1) as r', [link.code], '10.9.0.4')).rows[0].r.error, 'INVALID_CODE');
 });
+
+test('حذف الحساب: المعلم يحذف حسابه فقط مع كل بياناته، وبعد تأكيد صريح', async () => {
+  const T_C = randomUUID();
+  const C = teacher(T_C);
+  await as('postgres', null, `insert into auth.users(id, email, raw_user_meta_data) values ($1,'c@test.local','{}')`, [T_C]);
+  await saveQ(C, { type: 'true_false', answer_format: 'single', text: 'سؤال سيُحذف مع الحساب' }, [{ text: 'صح', is_correct: true }, { text: 'خطأ' }]);
+  assert.equal((await C('select count(*)::int c from questions')).rows[0].c, 1);
+
+  // بلا تأكيد لا يُحذف شيء، والزائر لا يستطيع الاستدعاء
+  assert.equal((await rpc1(C, `select public.delete_my_account('نعم') as r`)).r.error, 'CONFIRM_REQUIRED');
+  await assert.rejects(anon(`select public.delete_my_account('حذف')`));
+
+  assert.equal((await rpc1(C, `select public.delete_my_account('حذف') as r`)).r.ok, true);
+  const left = await as('postgres', null, `select (select count(*)::int from auth.users where id=$1) u, (select count(*)::int from profiles where id=$1) p, (select count(*)::int from questions where owner_id=$1) q`, [T_C]);
+  assert.deepEqual(left.rows[0], { u: 0, p: 0, q: 0 });
+  // حسابات المعلمين الآخرين لم تتأثر
+  assert.equal((await as('postgres', null, 'select count(*)::int c from auth.users where id = any($1)', [[T_A, T_B]])).rows[0].c, 2);
+});

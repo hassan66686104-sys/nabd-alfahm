@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Plus, ShieldCheck, Trash2, UserX } from 'lucide-react';
 import { Button, Card, ErrorBox, Field, Input, PageHeader, Toggle } from '@/components/ui';
 import { useFeedback } from '@/components/feedback';
 import { useAuth } from '@/hooks/useAuth';
-import { classes as classesApi, subjects as subjectsApi, updateProfile } from '@/lib/api';
+import { auth as authApi, classes as classesApi, subjects as subjectsApi, updateProfile } from '@/lib/api';
 import { toAppError } from '@/lib/errors';
 import { settingsSchema, firstError } from '@/lib/schemas';
 import { DEFAULT_SETTINGS, DEFAULT_SUBJECTS } from '@/lib/constants';
@@ -26,6 +27,22 @@ export default function Settings() {
   const [classList, setClassList] = useState<ClassGroup[]>([]);
   const [newSubject, setNewSubject] = useState('');
   const [newClass, setNewClass] = useState('');
+  const nav = useNavigate();
+  const [deleteWord, setDeleteWord] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const deleteAccount = async () => {
+    setDeleteError(null);
+    if (deleteWord.trim() !== 'حذف') return setDeleteError('اكتب كلمة «حذف» في الخانة لتأكيد حذف الحساب.');
+    if (!(await confirm({ title: 'حذف الحساب نهائيًا؟', body: 'ستُحذف كل أسئلتك وصفوفك وحصصك وتقاريرك وصورك، ولا يمكن استرجاعها.', danger: true, confirmText: 'احذف حسابي' }))) return;
+    setDeleting(true);
+    try {
+      await authApi.deleteAccount(deleteWord);
+      toast('حُذف حسابك وكل بياناته');
+      nav('/', { replace: true });
+    } catch (e) { setDeleteError(toAppError(e).message); } finally { setDeleting(false); }
+  };
 
   useEffect(() => {
     if (!profile) return;
@@ -107,6 +124,17 @@ export default function Settings() {
         <div className="flex gap-2">
           <Input value={newClass} onChange={(e) => setNewClass(e.target.value)} placeholder="مثال: الخامس / أ" />
           <Button icon={<Plus className="h-4 w-4" />} disabled={!newClass.trim()} onClick={() => run(async () => { await classesApi.create(newClass, ''); setNewClass(''); }, 'أضيف الصف')}>إضافة</Button>
+        </div>
+      </Card>
+      <Card className="space-y-3">
+        <h2 className="flex items-center gap-2 text-lg font-extrabold"><ShieldCheck className="h-5 w-5" />الخصوصية والحساب</h2>
+        <p className="text-brand-700">اطّلع على <Link to="/privacy" className="font-semibold underline">سياسة الخصوصية</Link> لمعرفة البيانات التي نحفظها وكيف نحميها.</p>
+        <div className="space-y-3 rounded-xl border-2 border-red-200 bg-red-50 p-4" data-testid="delete-account">
+          <h3 className="flex items-center gap-2 font-extrabold text-red-700"><UserX className="h-5 w-5" />حذف الحساب</h3>
+          <p className="text-sm text-red-800">يحذف حسابك نهائيًا مع كل أسئلتك وصفوفك وحصصك وتقاريرك وصورك. لا يمكن التراجع عن ذلك.</p>
+          <Field label="اكتب كلمة «حذف» للتأكيد"><Input value={deleteWord} onChange={(e) => setDeleteWord(e.target.value)} placeholder="حذف" aria-label="تأكيد حذف الحساب" /></Field>
+          {deleteError && <ErrorBox error={deleteError} />}
+          <Button variant="danger" icon={<Trash2 className="h-5 w-5" />} loading={deleting} disabled={deleteWord.trim() !== 'حذف'} onClick={deleteAccount}>حذف حسابي نهائيًا</Button>
         </div>
       </Card>
     </div>

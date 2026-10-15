@@ -14,6 +14,7 @@ import { uuid } from '@/lib/uuid';
 import { useSettings } from '@/hooks/useAuth';
 import { useLiveSession } from '@/hooks/useLiveSession';
 import type { SessionQuestion, Snapshot } from '@/lib/types';
+import { openPresent } from '@/lib/native';
 
 const STORE_KEY = 'nabd.instant-session';
 type Mode = 'yes_no' | 'true_false';
@@ -142,7 +143,7 @@ function InstantLive({ sessionId, onEnded }: { sessionId: string; onEnded: () =>
       <PageHeader title={<span className="flex items-center gap-2"><MessageCircleQuestion className="h-8 w-8 text-gold-400" /> الأسئلة الفورية</span>}
         actions={<div className="flex flex-wrap items-center gap-2">
           <SyncBadge sync={sync} />
-          <Button variant="outline" icon={<MonitorPlay className="h-5 w-5" />} onClick={() => window.open(`/present/${sessionId}`, '_blank', 'noopener')}>شاشة العرض</Button>
+          <Button variant="outline" icon={<MonitorPlay className="h-5 w-5" />} onClick={() => openPresent(sessionId, nav)}>شاشة العرض</Button>
           <Button variant="danger" loading={busy === 'end'} icon={<Square className="h-5 w-5" />} onClick={end}>إنهاء وعرض التقرير</Button>
         </div>} />
 

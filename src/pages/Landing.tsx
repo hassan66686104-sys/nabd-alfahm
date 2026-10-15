@@ -58,7 +58,7 @@ export default function Landing() {
             </div>
           ))}
         </div>
-        <p className="text-center text-sm text-brand-700"><Link to="/join" className="underline">صفحة انضمام الطلاب</Link></p>
+        <p className="text-center text-sm text-brand-700"><Link to="/join" className="underline">صفحة انضمام الطلاب</Link> · <Link to="/privacy" className="underline">سياسة الخصوصية</Link></p>
         <Credit className="text-base text-brand-800" />
       </div>
     </div>

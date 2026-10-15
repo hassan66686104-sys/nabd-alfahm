@@ -3,11 +3,13 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { fileURLToPath, URL } from 'node:url';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   plugins: [
     react(),
     VitePWA({
+      // تطبيق iOS لا يحتاج عامل الخدمة: الملفات مضمّنة داخل التطبيق
+      disable: mode === 'ios',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
@@ -46,4 +48,4 @@ export default defineConfig({
   },
   server: { host: true, port: 5173 },
   preview: { host: true, port: 4173 },
-});
+}));

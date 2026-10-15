@@ -11,6 +11,7 @@ import { useSettings } from '@/hooks/useAuth';
 import { computeLeaderboard, computeQuestionStats } from '@/lib/stats';
 import { OPTION_LETTERS, gameLabel } from '@/lib/constants';
 import ChallengePresent from './ChallengePresent';
+import NativeBack from '@/components/NativeBack';
 
 export default function Present() {
   const { id } = useParams();
@@ -39,7 +40,7 @@ export default function Present() {
   return (
     <div className="min-h-dvh bg-ivory">
       <header className="flex items-center justify-between gap-4 bg-brand-800 px-6 py-3 text-white">
-        <div className="flex items-center gap-3"><Logo className="h-10 w-10" /><span className="text-2xl font-extrabold">{session.title}</span></div>
+        <div className="flex items-center gap-3"><NativeBack /><Logo className="h-10 w-10" /><span className="text-2xl font-extrabold">{session.title}</span></div>
         <div className="flex items-center gap-6 text-2xl font-bold">
           {sq && <span dir="ltr" className="font-mono tracking-widest text-gold-300">{session.code}</span>}
           <span className="flex items-center gap-2"><Users className="h-7 w-7" />{active.length}</span>

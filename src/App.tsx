@@ -5,6 +5,7 @@ import { isConfigured } from './lib/supabase';
 import { Spinner } from './components/ui';
 import TeacherLayout from './components/TeacherLayout';
 import Landing from './pages/Landing';
+import Privacy from './pages/Privacy';
 import SetupNeeded from './pages/SetupNeeded';
 import { Login, Signup, ResetPassword } from './pages/Auth';
 import Join from './pages/student/Join';
@@ -46,6 +47,7 @@ export default function App() {
     <Suspense fallback={<Spinner />}>
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/reset" element={<ResetPassword />} />

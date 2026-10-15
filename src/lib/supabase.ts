@@ -13,7 +13,9 @@ export const supabase: SupabaseClient = createClient(url || 'http://localhost:54
 
 export function publicAppUrl(): string {
   const env = (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.trim();
-  return (env || window.location.origin).replace(/\/$/, '');
+  // داخل تطبيق iOS يكون الأصل capacitor://localhost، فتُستخدم روابط الموقع المنشور
+  const origin = /^https?:/.test(window.location.origin) ? window.location.origin : 'https://nabd-alfahm.netlify.app';
+  return (env || origin).replace(/\/$/, '');
 }
 
 export function joinUrl(code: string): string {

@@ -19,6 +19,7 @@ import { computeLeaderboard, computeQuestionStats, suggestActions, summarizeSess
 import { GAME_MODES, OPTION_LETTERS, gameLabel, typeLabel } from '@/lib/constants';
 import { formatDuration } from '@/lib/text';
 import type { GameMode, ResponseRow, SessionQuestion } from '@/lib/types';
+import { openPresent } from '@/lib/native';
 
 export default function LiveSession() {
   const { id } = useParams();
@@ -122,7 +123,7 @@ export default function LiveSession() {
           {!ended && <JoinInfo code={session.code} count={active.length} compact />}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" icon={<MonitorPlay className="h-5 w-5" />} onClick={() => window.open(`/present/${session.id}`, `present-${session.id}`, 'noopener')}>شاشة العرض</Button>
+          <Button variant="outline" icon={<MonitorPlay className="h-5 w-5" />} onClick={() => openPresent(session.id, nav, `present-${session.id}`)}>شاشة العرض</Button>
           {ended
             ? <Button onClick={() => nav(`/t/reports/${session.id}`)}>التقرير</Button>
             : <Button variant="danger" icon={<Flag className="h-5 w-5" />} loading={busy === 'end'} onClick={endSession}>إنهاء الحصة</Button>}

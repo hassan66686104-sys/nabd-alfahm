@@ -1,0 +1,42 @@
+# بناء تطبيق iOS ورفعه إلى TestFlight / App Store بدون جهاز Mac (Codemagic)
+# المتطلبات (مرة واحدة، من حسابك): ربط المستودع في Codemagic، وإضافة مفتاح
+# App Store Connect API باسم "nabd_asc" في Teams > Integrations.
+# راجع docs/APP_STORE.md للخطوات بالتفصيل.
+workflows:
+  ios-release:
+    name: نبض الفهم iOS
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: nabd_asc
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.nabdalfahm.teacher
+      vars:
+        XCODE_PROJECT: ios/App/App.xcodeproj
+        XCODE_SCHEME: App
+        APP_STORE_APPLE_ID: 0000000000 # استبدله بـ Apple ID الرقمي للتطبيق من App Store Connect
+      node: 20
+      xcode: latest
+    triggers: []
+    scripts:
+      - name: تثبيت الحزم
+        script: npm ci
+      - name: بناء الواجهة ومزامنة iOS
+        script: npm run build:ios
+      - name: إعداد التوقيع
+        script: xcode-project use-profiles
+      - name: رقم البناء التالي
+        script: |
+          LATEST=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || echo 0)
+          cd ios/App && agvtool new-version -all $((LATEST + 1))
+      - name: بناء ملف IPA
+        script: xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false

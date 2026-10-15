@@ -1,6 +1,6 @@
 // طبقة الوصول إلى البيانات (Supabase). كل خطأ يتحول إلى رسالة عربية واضحة.
 import { uuid } from './uuid';
-import { supabase, isConfigured } from './supabase';
+import { supabase, isConfigured, publicAppUrl } from './supabase';
 import { AppError, toAppError } from './errors';
 import type {
   Answer, ClassGroup, GameEvent, GamePowerResult, GameRollResult, GameSettings, GameState, GameSubmitResult, Participant, Profile, Question, Report, ResponseRow, Session, SessionQuestion, Snapshot, StudentState, Subject, Team, TeacherSettings,
@@ -38,7 +38,7 @@ export const auth = {
     ensure();
     const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { data: { full_name: fullName }, emailRedirectTo: `${window.location.origin}/t` },
+      options: { data: { full_name: fullName }, emailRedirectTo: `${publicAppUrl()}/t` },
     });
     if (error) throw toAppError(error);
     return { needsConfirmation: !data.session };
@@ -48,13 +48,29 @@ export const auth = {
   },
   async requestReset(email: string) {
     ensure();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset` });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${publicAppUrl()}/reset` });
     if (error) throw toAppError(error);
   },
   async updatePassword(password: string) {
     ensure();
     const { error } = await supabase.auth.updateUser({ password });
     if (error) throw toAppError(error);
+  },
+  // حذف الحساب نهائيًا مع كل بياناته (شرط متجر Apple). الصور أولًا ثم الحساب.
+  async deleteAccount(confirmWord: string) {
+    ensure();
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) throw new AppError('AUTH', 'سجّل الدخول أولًا.');
+    const bucket = supabase.storage.from('question-images');
+    for (let i = 0; i < 50; i++) {
+      const { data: files } = await bucket.list(u.user.id, { limit: 100 });
+      if (!files?.length) break;
+      const { data: gone, error } = await bucket.remove(files.map((f) => `${u.user!.id}/${f.name}`));
+      if (error || !gone?.length) break;
+    }
+    const r = (await run(supabase.rpc('delete_my_account', { p_confirm: confirmWord }))) as { ok: boolean; error?: string };
+    if (!r.ok) throw new AppError(r.error ?? 'FORBIDDEN');
+    await supabase.auth.signOut().catch(() => {});
   },
 };
 

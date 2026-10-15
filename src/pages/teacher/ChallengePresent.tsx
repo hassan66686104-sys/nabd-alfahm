@@ -10,6 +10,7 @@ import { useTick } from '@/components/QuestionView';
 import { useChallenge } from '@/hooks/useChallenge';
 import { formatClock, goalText } from '@/lib/game';
 import { sfx } from '@/lib/sound';
+import NativeBack from '@/components/NativeBack';
 
 export default function ChallengePresent({ id }: { id: string }) {
   const c = useChallenge(id);
@@ -40,7 +41,7 @@ export default function ChallengePresent({ id }: { id: string }) {
   return (
     <div className="min-h-dvh bg-ivory">
       <header className="flex items-center justify-between gap-4 bg-brand-800 px-6 py-3 text-white">
-        <div className="flex items-center gap-3"><Logo className="h-10 w-10" /><Trophy className="h-8 w-8 text-gold-300" /><span className="text-2xl font-extrabold">{s.title}</span></div>
+        <div className="flex items-center gap-3"><NativeBack /><Logo className="h-10 w-10" /><Trophy className="h-8 w-8 text-gold-300" /><span className="text-2xl font-extrabold">{s.title}</span></div>
         <div className="flex items-center gap-3">
           {s.status === 'live' && timeLeft != null && <span className="flex items-center gap-2 rounded-xl bg-white/15 px-4 py-1 text-3xl font-extrabold tabular-nums"><Timer className="h-7 w-7" />{formatClock(timeLeft)}</span>}
           <SoundToggle />
