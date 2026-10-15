@@ -3,9 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Dices, Flag, Loader2, Shield, Snowflake, Star, Timer, Trophy, XCircle, Zap } from 'lucide-react';
 import { Logo, Credit } from '@/components/Logo';
-import { Badge, Button, Card, ErrorBox, Modal, ProgressBar } from '@/components/ui';
+import { Badge, Button, Card, ErrorBox, Modal, ProgressBar, cx } from '@/components/ui';
 import { OfflineBanner } from '@/components/feedback';
 import SoundToggle from '@/components/SoundToggle';
+import { Confetti, FunBackdrop, ScorePop, VividStat, useBump } from '@/components/fun';
 import { AnswerInput, answerComplete, emptyAnswer } from '@/components/AnswerInput';
 import { Hint, QuestionImage, QuestionText, Stimulus, useTick } from '@/components/QuestionView';
 import { EventFeed, Leaderboard, Podium, TeamScores } from '@/components/challenge';
@@ -37,6 +38,12 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
   const [picking, setPicking] = useState(false);
   const [acting, setActing] = useState(false);
   const [beginning, setBeginning] = useState(false);
+  // روح اللعبة: احتفال، نقاط تقفز، واهتزاز عند الخطأ
+  const [burst, setBurst] = useState(0);
+  const [pop, setPop] = useState({ amount: 0, k: 0 });
+  const [shake, setShake] = useState(0);
+  const pointsBump = useBump(gs?.me.points);
+  const celebrated = useRef(false);
   const now = useTick(500, offset);
   const busy = useRef(false);
   const reqIds = useRef(new Map<string, string>());
@@ -91,6 +98,7 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
       if (st === 'live') sfx.start();
       if (st === 'ended') { if (gs.session.winner?.id === gs.me.id) sfx.win(); else sfx.streak(); }
     }
+    if (st === 'ended' && !celebrated.current) { celebrated.current = true; setBurst((b) => b + 1); }
     prevStatus.current = st;
     const newest = gs.events[0]?.id ?? 0;
     if (lastEvent.current !== null) {
@@ -147,6 +155,8 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
       const r = await game.submit(p.participant_id, p.token, shown.sq_id, draft, rid);
       if (r.ok) {
         setFeedback({ ...r, sq_id: shown.sq_id });
+        if (r.correct) { setBurst((b) => b + 1); setPop({ amount: r.gain, k: Date.now() }); }
+        else if (r.correct === false) setShake(Date.now());
         if (r.won) sfx.win();
         else if (r.correct) { sfx.correct(); if (r.spin_earned) setTimeout(sfx.streak, 350); else if (r.gain > 10) setTimeout(sfx.coin, 300); }
         else if (r.correct === false) sfx.wrong();
@@ -183,6 +193,7 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
       await new Promise((res) => setTimeout(res, 600));
       if (r.ok) {
         setRoll(r);
+        setBurst((b) => b + 1);
         const k = r.kind;
         if (r.won) sfx.win(); else if (k === 'treasure' || k === 'big_treasure' || k === 'double') sfx.coin(); else if (k === 'shield') sfx.shield(); else sfx.streak();
       } else setTransient(messageFor(r.error));
@@ -219,7 +230,7 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
         </div>
       </div>
       <div className="flex items-center gap-1">
-        <Badge tone="gold"><Star className="h-3.5 w-3.5" /><span data-testid="my-points">{me.points}</span> نقطة</Badge>
+        <span className={cx('inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-yellow-300 to-orange-400 px-3 py-1 text-sm font-extrabold text-purple-950 shadow-lg', pointsBump)}><Star className="h-4 w-4 fill-current motion-safe:animate-spin [animation-duration:4s]" /><span data-testid="my-points">{me.points}</span> نقطة</span>
         <SoundToggle className="text-white" />
       </div>
     </div>
@@ -230,7 +241,8 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
     return (
       <Shell>
         {header}
-        <Card className="space-y-4 bg-gradient-to-b from-gold-50 to-white py-8">
+        <Confetti burst={burst} />
+        <Card className="animate-bounceIn space-y-4 bg-gradient-to-b from-yellow-50 via-white to-pink-50 py-8">
           <Podium rows={gs.board} winner={gs.session.winner} prize={g.prize} />
           <p className="text-center text-lg font-bold">{won ? 'مبارك! أنت بطل التحدي 🎉' : `انتهى التحدي. مركزك ${me.rank ?? '—'} بـ ${me.points} نقطة.`}</p>
           <p className="text-center text-brand-600">أجبت {me.correct} إجابة صحيحة من {me.answered}.</p>
@@ -247,10 +259,11 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
     return (
       <Shell>
         {header}
+        <Confetti burst={burst} />
         <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
         <Card className="space-y-4 py-8 text-center">
-          <Trophy className="mx-auto h-16 w-16 text-gold-400" />
-          <h1 className="text-2xl font-extrabold">استعد لتحدي الكأس!</h1>
+          <Trophy className="mx-auto h-20 w-20 text-yellow-400 motion-safe:animate-bounce motion-safe:[animation-duration:1.6s]" style={{ filter: 'drop-shadow(0 0 14px rgba(250,204,21,.9))' }} />
+          <h1 className="bg-gradient-to-l from-fuchsia-600 via-orange-500 to-purple-700 bg-clip-text text-3xl font-black text-transparent">استعد لتحدي الكأس!</h1>
           <p className="text-brand-700">{goalText(g)}{g.prize && <> · الجائزة: <b>{g.prize}</b></>}</p>
           {g.practice ? (
             g.host === me.id ? (
@@ -282,49 +295,51 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
   return (
     <Shell>
       {header}
+      <Confetti burst={burst} />
       <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
       <div className="flex flex-col gap-3">
 
       <div className="grid grid-cols-3 gap-2 text-center text-white">
-        <Stat label="نقاطي" value={me.points} />
-        <Stat label="مركزي" value={me.rank ?? '—'} />
-        {timeLeft != null ? <Stat label="الوقت" value={formatClock(timeLeft)} icon={<Timer className="h-4 w-4" />} /> : <Stat label="الهدف" value={target ?? ''} icon={<Trophy className="h-4 w-4" />} />}
+        <VividStat i={0} label="نقاطي ⭐" value={me.points} />
+        <VividStat i={1} label="مركزي 🏅" value={me.rank ?? '—'} />
+        {timeLeft != null ? <VividStat i={2} label="الوقت" value={formatClock(timeLeft)} icon={<Timer className="h-4 w-4" />} /> : <VividStat i={2} label="الهدف" value={target ?? ''} icon={<Trophy className="h-4 w-4" />} />}
       </div>
       {target && <ProgressBar value={Math.min(100, (me.points / target) * 100)} tone="gold" label={`التقدم نحو الكأس ${me.points} من ${target}`} />}
 
       <div className="flex flex-wrap gap-2">
-        {shieldLeft > 0 && <Badge tone="blue"><Shield className="h-3.5 w-3.5" />درع {Math.ceil(shieldLeft / 1000)} ث</Badge>}
-        {me.double_next && <Badge tone="gold"><Zap className="h-3.5 w-3.5" />إجابتك الصحيحة التالية ×2</Badge>}
-        {me.streak >= 1 && powersOn && <Badge tone="green">🔥 {me.streak} متتالية{me.streak % 3 ? ` · ${3 - (me.streak % 3)} للرمية` : ''}</Badge>}
+        {shieldLeft > 0 && <span className="inline-flex animate-bounceIn items-center gap-1 rounded-full bg-gradient-to-r from-sky-400 to-blue-600 px-3 py-1 text-sm font-bold text-white shadow"><Shield className="h-4 w-4 motion-safe:animate-pulse" />درع {Math.ceil(shieldLeft / 1000)} ث</span>}
+        {me.double_next && <span className="inline-flex animate-bounceIn items-center gap-1 rounded-full bg-gradient-to-r from-yellow-300 to-orange-500 px-3 py-1 text-sm font-bold text-purple-950 shadow"><Zap className="h-4 w-4 motion-safe:animate-wiggle" />إجابتك الصحيحة التالية ×2</span>}
+        {me.streak >= 1 && powersOn && <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-red-600 px-3 py-1 text-sm font-bold text-white shadow"><span className="inline-block motion-safe:animate-wiggle">🔥</span> {me.streak} متتالية{me.streak % 3 ? ` · ${3 - (me.streak % 3)} للرمية` : ''}</span>}
       </div>
 
-      {notice && <div role="status" className="animate-pop rounded-xl bg-gold-400 p-3 text-center font-bold text-brand-900">{notice}</div>}
+      {notice && <div role="status" className="animate-bounceIn rounded-2xl bg-gradient-to-r from-yellow-300 via-orange-400 to-pink-500 p-3 text-center text-lg font-extrabold text-purple-950 shadow-xl ring-2 ring-white/60">{notice}</div>}
 
       {powersOn && (me.spins > 0 || me.power) && (
-        <Card className="flex flex-wrap items-center justify-between gap-2 border-2 border-gold-400 bg-gold-50">
+        <Card className="flex animate-bounceIn flex-wrap items-center justify-between gap-2 border-0 bg-gradient-to-r from-fuchsia-500 via-purple-500 to-indigo-500 text-white shadow-xl ring-4 ring-yellow-300/70">
           {me.power ? (
             <>
-              <span className="font-bold">{LUCK[me.power].emoji} لديك قدرة: {LUCK[me.power].title}</span>
+              <span className="text-lg font-extrabold"><span className="inline-block motion-safe:animate-wiggle">{LUCK[me.power].emoji}</span> لديك قدرة: {LUCK[me.power].title}</span>
               <Button variant="gold" onClick={() => setPicking(true)}>{POWER_ACTION[me.power]}</Button>
             </>
           ) : (
             <>
-              <span className="font-bold">🎲 لديك {me.spins} {me.spins === 1 ? 'رمية' : 'رميات'} حظ</span>
-              <Button variant="gold" loading={rolling} icon={<Dices className="h-5 w-5" />} onClick={doRoll}>ارمِ رقم الحظ</Button>
+              <span className="text-lg font-extrabold"><span className="inline-block motion-safe:animate-wiggle">🎲</span> لديك {me.spins} {me.spins === 1 ? 'رمية' : 'رميات'} حظ</span>
+              <Button variant="gold" disabled={rolling} icon={<Dices className={cx('h-6 w-6', rolling ? 'animate-diceSpin' : 'motion-safe:animate-wiggle')} />} onClick={doRoll}>{rolling ? 'النرد يدور…' : 'ارمِ رقم الحظ'}</Button>
             </>
           )}
         </Card>
       )}
 
       {frozenLeft > 0 && (
-        <div role="status" className="flex items-center justify-center gap-2 rounded-xl bg-sky-100 p-4 text-lg font-bold text-sky-900">
-          <Snowflake className="h-6 w-6" />أنت مجمَّد! تستطيع الإجابة بعد {Math.ceil(frozenLeft / 1000)} ثانية
+        <div role="status" className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-sky-200 to-cyan-100 p-4 text-lg font-bold text-sky-900 shadow-lg ring-2 ring-white">
+          <Snowflake className="h-7 w-7 motion-safe:animate-spin [animation-duration:3s]" />أنت مجمَّد! تستطيع الإجابة بعد {Math.ceil(frozenLeft / 1000)} ثانية
         </div>
       )}
 
       {q ? (
-        <Card className="space-y-4" data-testid="game-question">
-          <div className="flex items-center justify-between"><Badge>السؤال {q.number} من {q.total}</Badge>{me.double_next && <Badge tone="gold">×2</Badge>}</div>
+        <Card key={`${q.sq_id}-${shake}`} className={cx('relative space-y-4 border-t-8 border-t-fuchsia-500 shadow-2xl', shake && feedback?.correct === false ? 'animate-shake' : 'animate-bounceIn')} data-testid="game-question">
+          <ScorePop amount={pop.amount} k={feedback?.correct ? pop.k : 0} />
+          <div className="flex items-center justify-between"><span className="rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-500 px-3 py-1 text-sm font-bold text-white">السؤال {q.number} من {q.total}</span>{me.double_next && <Badge tone="gold">×2</Badge>}</div>
           <Stimulus kind={q.stimulus_kind} text={q.stimulus_text} source={q.stimulus_source} />
           <QuestionImage url={q.image_url} />
           <QuestionText text={q.text} blanksAs={q.answer_format === 'blanks' ? 'line' : undefined} />
@@ -333,9 +348,9 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
           {feedback ? (
             <div className="space-y-2">
               {feedback.correct === true ? (
-                <div role="status" className="flex animate-pop items-center gap-2 rounded-xl bg-green-50 p-3 text-lg font-bold text-green-800"><CheckCircle2 className="h-7 w-7" />صحيحة! +{feedback.gain} نقاط{feedback.spin_earned && ' · كسبت رمية حظ 🎲'}</div>
+                <div role="status" className="flex animate-bounceIn items-center gap-2 rounded-2xl bg-gradient-to-r from-lime-300 to-emerald-400 p-3 text-xl font-extrabold text-emerald-950 shadow-lg"><CheckCircle2 className="h-8 w-8" />صحيحة! +{feedback.gain} نقاط{feedback.spin_earned && ' · كسبت رمية حظ 🎲'}</div>
               ) : feedback.correct === false ? (
-                <div role="status" className="space-y-1 rounded-xl bg-red-50 p-3 text-red-800">
+                <div role="status" className="animate-pop space-y-1 rounded-2xl bg-gradient-to-r from-rose-100 to-orange-100 p-3 text-red-800 ring-2 ring-rose-300">
                   <div className="flex items-center gap-2 text-lg font-bold"><XCircle className="h-7 w-7" />إجابة غير صحيحة{feedback.gain > 0 && ` (+${feedback.gain} لجزء صحيح)`}</div>
                   {feedback.correct_text && <div>الإجابة الصحيحة: <b>{feedback.correct_text}</b></div>}
                 </div>
@@ -344,12 +359,12 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
               <Button size="lg" variant="outline" className="w-full" onClick={next}>السؤال التالي</Button>
             </div>
           ) : (
-            <Button size="xl" className="w-full" disabled={!canAnswer || !answerComplete(q, draft)} loading={sending} onClick={submit}>إرسال الإجابة</Button>
+            <Button size="xl" className="w-full bg-gradient-to-r from-fuchsia-600 to-purple-700 text-white shadow-lg hover:from-fuchsia-500 hover:to-purple-600" disabled={!canAnswer || !answerComplete(q, draft)} loading={sending} onClick={submit}>إرسال الإجابة</Button>
           )}
         </Card>
       ) : me.finished ? (
         <Card className="space-y-2 py-8 text-center">
-          <Flag className="mx-auto h-12 w-12 text-brand-500" />
+          <Flag className="mx-auto h-14 w-14 text-fuchsia-500 motion-safe:animate-wiggle" />
           <h2 className="text-xl font-extrabold">أنهيت كل الأسئلة!</h2>
           <p className="text-brand-600">انتظر حتى ينتهي التحدي{powersOn ? '، ويمكنك استخدام رمية الحظ إن كانت لديك' : ''}.</p>
         </Card>
@@ -372,8 +387,8 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
         footer={<Button onClick={() => { const pw = roll?.power; setRoll(null); if (pw) setPicking(true); }}>{roll?.power ? 'اختر الهدف' : 'رائع!'}</Button>}>
         {roll && (
           <div className="space-y-3 text-center" data-testid="roll-result">
-            <div className="mx-auto flex h-20 w-20 animate-pop items-center justify-center rounded-2xl bg-brand-700 text-5xl font-extrabold text-white">{roll.number}</div>
-            <div className="text-2xl font-extrabold">{LUCK[roll.kind]?.emoji} {LUCK[roll.kind]?.title}</div>
+            <div className="mx-auto flex h-24 w-24 animate-bounceIn items-center justify-center rounded-3xl bg-gradient-to-br from-fuchsia-500 to-orange-400 text-6xl font-black text-white shadow-xl ring-4 ring-yellow-300">{roll.number}</div>
+            <div className="text-2xl font-extrabold"><span className="inline-block text-4xl motion-safe:animate-wiggle">{LUCK[roll.kind]?.emoji}</span> {LUCK[roll.kind]?.title}</div>
             <p className="text-brand-700">{LUCK[roll.kind]?.text}</p>
           </div>
         )}
@@ -403,20 +418,11 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
   );
 }
 
-function Stat({ label, value, icon }: { label: string; value: React.ReactNode; icon?: React.ReactNode }) {
-  return (
-    <div className="rounded-xl bg-white/10 p-2">
-      <div className="flex items-center justify-center gap-1 text-xs text-brand-100">{icon}{label}</div>
-      <div className="text-2xl font-extrabold tabular-nums">{value}</div>
-    </div>
-  );
-}
-
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-brand-800 to-brand-900">
+    <FunBackdrop>
       <OfflineBanner extra="أعد المحاولة عند عودة الاتصال." />
       <div className="mx-auto flex w-full max-w-xl flex-col gap-3 px-3 py-4 sm:px-4 lg:max-w-none lg:px-8">{children}<Credit light className="pt-4" /></div>
-    </div>
+    </FunBackdrop>
   );
 }

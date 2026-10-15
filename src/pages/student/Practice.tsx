@@ -1,10 +1,11 @@
 // التحدي الذاتي: الطالب يدخل الموقع، يختار الدرس، ويبدأ فورًا وحده أو مع زملائه دون رمز ولا تدخل المعلم
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BookOpen, Loader2, RefreshCw, Trophy, User, Users } from 'lucide-react';
+import { Loader2, RefreshCw, Trophy, User, Users } from 'lucide-react';
 import { Brand, Credit } from '@/components/Logo';
-import { Badge, Button, Card, ErrorBox, Field, Input, Spinner, cx } from '@/components/ui';
+import { Button, Card, ErrorBox, Field, Input, Spinner, cx } from '@/components/ui';
 import { OfflineBanner } from '@/components/feedback';
+import { FunBackdrop, LESSON_EMOJI, VIVID } from '@/components/fun';
 import { practice, student, type PracticePreview, type PublicPractice } from '@/lib/api';
 import { messageFor, toAppError } from '@/lib/errors';
 import { participantStore } from '@/hooks/useStudent';
@@ -98,15 +99,20 @@ export default function Practice() {
       <Button type="submit" size="lg" className="w-full" loading={busy === 'lookup'}>متابعة</Button>
     </form>
   );
-  const title = <h1 className="flex items-center gap-2 text-2xl font-extrabold"><Trophy className="h-7 w-7 text-gold-400" />تحدي الكأس</h1>;
+  const title = (
+    <h1 className="flex items-center gap-2 text-3xl font-black">
+      <Trophy className="h-9 w-9 text-yellow-400 motion-safe:animate-bounce motion-safe:[animation-duration:1.8s]" style={{ filter: 'drop-shadow(0 0 10px rgba(250,204,21,.9))' }} />
+      <span className="bg-gradient-to-l from-fuchsia-600 via-orange-500 to-purple-700 bg-clip-text text-transparent">تحدي الكأس</span>
+    </h1>
+  );
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-brand-700 to-brand-900">
+    <FunBackdrop>
       <OfflineBanner />
       <div className="mx-auto flex w-full max-w-lg flex-col gap-4 px-4 py-8 lg:max-w-none lg:px-8">
-        <div className="mx-auto rounded-2xl bg-white px-3 py-2"><Brand /></div>
+        <div className="mx-auto animate-bounceIn rounded-2xl bg-white px-3 py-2 shadow-xl"><Brand /></div>
         {!data ? (
-          <Card className="mx-auto w-full max-w-xl space-y-4 p-6">
+          <Card className="mx-auto w-full max-w-xl animate-bounceIn space-y-4 p-6 shadow-2xl">
             {title}
             {teachers === null || (busy === 'lookup' && !askCode) ? <Spinner /> : teachers.length > 1 && !askCode ? (
               <>
@@ -128,7 +134,7 @@ export default function Practice() {
           </Card>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
-            <Card className="space-y-4 p-5">
+            <Card className="animate-bounceIn space-y-4 p-5 shadow-2xl">
               <div>
                 <div className="text-sm text-brand-600">تحديات {data.teacher}</div>
                 {title}
@@ -137,20 +143,21 @@ export default function Practice() {
               <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="طريقة اللعب">
                 {([[false, 'وحدي', User], [true, 'مع زملائي', Users]] as const).map(([v, label, Icon]) => (
                   <button key={label} type="button" role="radio" aria-checked={withFriends === v} onClick={() => setWithFriends(v)}
-                    className={cx('flex items-center justify-center gap-2 rounded-xl border-2 p-2.5 font-bold', withFriends === v ? 'border-gold-400 bg-gold-50' : 'border-brand-100')}>
+                    className={cx('flex items-center justify-center gap-2 rounded-xl border-2 p-2.5 font-bold transition', withFriends === v ? 'border-transparent bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-lg' : 'border-purple-200 text-purple-800 hover:bg-purple-50')}>
                     <Icon className="h-5 w-5" />{label}
                   </button>
                 ))}
               </div>
               <div>
-                <div className="mb-2 font-semibold text-brand-800">اضغط على الدرس ليبدأ التحدي</div>
+                <div className="mb-2 font-bold text-purple-800">👇 اضغط على الدرس ليبدأ التحدي</div>
                 {data.lessons.length === 0 ? <p className="rounded-xl bg-ivory-100 p-3 text-brand-700">لا توجد دروس جاهزة بعد. اطلب من معلمك إضافة أسئلة للدروس.</p> : (
                   <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" aria-label="الدروس">
-                    {data.lessons.map((l) => (
+                    {data.lessons.map((l, i) => (
                       <button key={l.lesson} type="button" disabled={!!busy} onClick={() => start(l.lesson)} data-testid="lesson"
-                        className={cx('flex items-center justify-between rounded-xl border-2 p-3 text-start font-bold transition disabled:opacity-60', lesson === l.lesson && busy ? 'border-gold-400 bg-gold-50' : 'border-brand-100 hover:border-gold-400 hover:bg-gold-50')}>
-                        <span className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-brand-600" />{l.lesson}</span>
-                        {busy === l.lesson ? <Loader2 className="h-5 w-5 animate-spin" aria-label="جارٍ البدء" /> : <Badge tone="gray">{l.count} سؤال</Badge>}
+                        style={{ animationDelay: `${i * 60}ms` }}
+                        className={cx('group flex animate-bounceIn items-center [animation-fill-mode:both] justify-between gap-2 rounded-2xl bg-gradient-to-br p-3 text-start font-extrabold text-white shadow-lg ring-2 ring-white/40 transition hover:-translate-y-1 hover:scale-[1.03] hover:shadow-2xl disabled:opacity-60', VIVID[i % VIVID.length], lesson === l.lesson && busy && 'ring-4 ring-yellow-300')}>
+                        <span className="flex items-center gap-2 drop-shadow"><span className="text-2xl transition group-hover:animate-wiggle">{LESSON_EMOJI[i % LESSON_EMOJI.length]}</span>{l.lesson}</span>
+                        {busy === l.lesson ? <Loader2 className="h-5 w-5 shrink-0 animate-spin" aria-label="جارٍ البدء" /> : <span className="shrink-0 rounded-full bg-white/25 px-2 py-0.5 text-xs font-bold">{l.count} سؤال</span>}
                       </button>
                     ))}
                   </div>
@@ -160,9 +167,9 @@ export default function Practice() {
               {withFriends && <p className="text-sm text-brand-600">«مع زملائي» ينشئ غرفة برمز؛ تظهر لزملائك المتصلين هنا، أو تعطيهم الرمز، وتبدأ أنت عندما يدخلون.</p>}
             </Card>
 
-            <Card className="space-y-2 p-5">
+            <Card className="animate-bounceIn space-y-2 p-5 shadow-2xl">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-extrabold">زملاء ينتظرون منافسًا</h2>
+                <h2 className="text-lg font-extrabold">⚔️ زملاء ينتظرون منافسًا</h2>
                 <button type="button" onClick={() => load(code, true)} className="flex items-center gap-1 text-sm font-semibold text-brand-700 underline"><RefreshCw className="h-4 w-4" />تحديث</button>
               </div>
               {data.rooms.length === 0 ? <p className="text-brand-600">لا يوجد أحد الآن. اختر «مع زملائي» ثم الدرس، وسيظهر تحديك لزملائك.</p> : data.rooms.map((r) => (
@@ -179,6 +186,6 @@ export default function Practice() {
         )}
         <Credit light />
       </div>
-    </div>
+    </FunBackdrop>
   );
 }

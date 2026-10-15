@@ -66,22 +66,23 @@ export function EventFeed({ events, large }: { events: GameEvent[]; large?: bool
 
 export function Podium({ rows, winner, prize, large }: { rows: GameBoardRow[]; winner: { id: string; name: string } | null; prize?: string; large?: boolean }) {
   const top = rows.slice(0, 3);
-  const medals = ['text-gold-400', 'text-slate-400', 'text-amber-600'];
+  const medals = ['text-yellow-100', 'text-white', 'text-amber-100'];
   return (
     <div className="space-y-4 text-center" data-testid="game-podium">
-      <Trophy className={cx('mx-auto text-gold-400 drop-shadow', large ? 'h-32 w-32' : 'h-20 w-20')} />
+      <Trophy className={cx('mx-auto animate-bounceIn text-yellow-400 motion-safe:animate-glow', large ? 'h-32 w-32' : 'h-24 w-24')} />
       {winner ? (
         <div>
           <div className={cx('text-brand-600', large && 'text-3xl')}>الكأس من نصيب</div>
-          <div className={cx('font-extrabold text-brand-900', large ? 'text-7xl' : 'text-4xl')} data-testid="game-winner">{winner.name}</div>
+          <div className={cx('animate-bounceIn bg-gradient-to-l from-fuchsia-600 via-orange-500 to-purple-700 bg-clip-text font-black text-transparent', large ? 'text-7xl' : 'text-4xl')} data-testid="game-winner">{winner.name}</div>
           {prize && <div className={cx('mt-2 inline-block rounded-full bg-gold-100 px-4 py-1 font-bold text-brand-900', large && 'text-3xl')}>🎁 {prize}</div>}
         </div>
       ) : <div className="text-xl font-bold">انتهى التحدي</div>}
       {top.length > 0 && (
         <div className="mx-auto grid max-w-xl grid-cols-3 items-end gap-2">
           {[1, 0, 2].map((idx) => top[idx] && (
-            <div key={top[idx].id} className={cx('rounded-t-2xl bg-white p-2 shadow-card', idx === 0 ? 'pb-8 pt-4' : idx === 1 ? 'pb-4' : 'pb-2')}>
-              <Medal className={cx('mx-auto', large ? 'h-12 w-12' : 'h-8 w-8', medals[idx])} />
+            <div key={top[idx].id} style={{ animationDelay: `${(2 - idx) * 150}ms` }}
+              className={cx('animate-bounceIn rounded-t-2xl bg-gradient-to-b p-2 text-white shadow-xl [animation-fill-mode:both]', idx === 0 ? 'from-yellow-300 to-orange-500 pb-8 pt-4' : idx === 1 ? 'from-sky-300 to-indigo-500 pb-4' : 'from-pink-300 to-fuchsia-600 pb-2')}>
+              <Medal className={cx('mx-auto drop-shadow', large ? 'h-12 w-12' : 'h-8 w-8', medals[idx], idx === 0 && 'motion-safe:animate-wiggle')} />
               <div className={cx('truncate font-bold', large && 'text-2xl')}>{top[idx].name}</div>
               <div className={cx('font-extrabold', large ? 'text-3xl' : 'text-lg')}>{top[idx].points}</div>
             </div>

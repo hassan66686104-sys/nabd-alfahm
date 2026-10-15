@@ -4,7 +4,8 @@ import { mkdirSync } from 'node:fs';
 
 const SHOTS = process.env.E2E_SHOTS ?? 'test-results/screens';
 mkdirSync(SHOTS, { recursive: true });
-const shot = (p: Page, name: string) => p.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
+// ننتظر انتهاء حركات الظهور قبل التصوير
+const shot = async (p: Page, name: string) => { await p.waitForTimeout(800); await p.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true }); };
 
 const CSV = [
   'type,text,options,correct,lesson',
@@ -68,8 +69,8 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   await shot(solo, '41-practice-lessons');
   await solo.getByTestId('lesson').filter({ hasText: 'الأخلاق' }).click();
   await expect(solo.getByText('السؤال 1 من 4')).toBeVisible();
-  const card = await solo.getByTestId('game-question').boundingBox();
-  expect(card!.width).toBeGreaterThan(800);
+  // تُقاس البطاقة بعد انتهاء حركة ظهورها
+  await expect.poll(async () => (await solo.getByTestId('game-question').boundingBox())?.width ?? 0).toBeGreaterThan(800);
   await shot(solo, '44-laptop-student-game');
   await answerAll(solo);
   await expect(solo.getByTestId('game-winner')).toHaveText('سلمى', { timeout: 10000 });

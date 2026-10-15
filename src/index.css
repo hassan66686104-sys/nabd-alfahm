@@ -22,6 +22,18 @@
   .table-base td { @apply border-b border-brand-50 px-3 py-2 align-top; }
 }
 
+/* حركات تُستخدم بأسماء مباشرة في style (رموز طائرة وقصاصات الاحتفال) */
+@keyframes floatUp {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10% { opacity: .9; }
+  90% { opacity: .9; }
+  100% { transform: translateY(-115vh) rotate(360deg); opacity: 0; }
+}
+@keyframes confetti {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(var(--dx), 105vh) rotate(var(--rot)); opacity: .9; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
