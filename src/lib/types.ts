@@ -247,7 +247,9 @@ export interface StudentState {
 
 // ---------- «تحدي الكأس»: لعب ذاتي ----------
 export interface GameSettings {
-  end?: 'time' | 'target';
+  end?: 'time' | 'target' | 'all';
+  practice?: boolean; // تحدٍّ بدأه الطالب بنفسه
+  host?: string; // معرّف الطالب صاحب الغرفة
   minutes?: number;
   target?: number;
   powers?: boolean;

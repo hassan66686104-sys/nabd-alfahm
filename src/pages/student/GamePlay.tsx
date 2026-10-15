@@ -10,7 +10,8 @@ import { AnswerInput, answerComplete, emptyAnswer } from '@/components/AnswerInp
 import { Hint, QuestionImage, QuestionText, Stimulus, useTick } from '@/components/QuestionView';
 import { EventFeed, Leaderboard, Podium, TeamScores } from '@/components/challenge';
 import { participantStore, type StoredParticipant } from '@/hooks/useStudent';
-import { game } from '@/lib/api';
+import { game, practice } from '@/lib/api';
+import { lastPracticeCode } from '@/lib/game';
 import { isNetworkError, messageFor, toAppError } from '@/lib/errors';
 import { GAME_SOFT_ERRORS, LUCK, POWER_ACTION, formatClock, goalText, luckTable, powerNeedsTeam } from '@/lib/game';
 import { sfx } from '@/lib/sound';
@@ -35,6 +36,7 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
   const [rolling, setRolling] = useState(false);
   const [picking, setPicking] = useState(false);
   const [acting, setActing] = useState(false);
+  const [beginning, setBeginning] = useState(false);
   const now = useTick(500, offset);
   const busy = useRef(false);
   const reqIds = useRef(new Map<string, string>());
@@ -164,6 +166,16 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
     }
   };
 
+  const begin = async () => {
+    setBeginning(true);
+    try {
+      const r = await practice.begin(p.participant_id, p.token);
+      if (!r.ok) setTransient(messageFor(r.error));
+      await refresh();
+    } catch (e) { setTransient(toAppError(e).message); }
+    finally { setBeginning(false); }
+  };
+
   const doRoll = async () => {
     setRolling(true); sfx.roll();
     try {
@@ -222,7 +234,10 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
           <Podium rows={gs.board} winner={gs.session.winner} prize={g.prize} />
           <p className="text-center text-lg font-bold">{won ? 'مبارك! أنت بطل التحدي 🎉' : `انتهى التحدي. مركزك ${me.rank ?? '—'} بـ ${me.points} نقطة.`}</p>
           <p className="text-center text-brand-600">أجبت {me.correct} إجابة صحيحة من {me.answered}.</p>
-          <div className="text-center"><Button variant="outline" onClick={() => { participantStore.clear(); nav('/'); }}>الخروج</Button></div>
+          <div className="flex flex-wrap justify-center gap-2">
+            {g.practice && <Button variant="gold" onClick={() => { participantStore.clear(); nav(lastPracticeCode() ? `/practice/${lastPracticeCode()}` : '/practice'); }}>تحدٍّ جديد</Button>}
+            <Button variant="outline" onClick={() => { participantStore.clear(); nav('/'); }}>الخروج</Button>
+          </div>
         </Card>
       </Shell>
     );
@@ -236,7 +251,17 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
           <Trophy className="mx-auto h-16 w-16 text-gold-400" />
           <h1 className="text-2xl font-extrabold">استعد لتحدي الكأس!</h1>
           <p className="text-brand-700">{goalText(g)}{g.prize && <> · الجائزة: <b>{g.prize}</b></>}</p>
-          <p className="text-brand-600">سيبدأ التحدي عندما يضغط المعلم «ابدأ». أجب بسرعة وبدقة: كل إجابة صحيحة = 10 نقاط.</p>
+          {g.practice ? (
+            g.host === me.id ? (
+              <div className="space-y-3 rounded-xl bg-gold-50 p-4">
+                <p className="font-bold">ادعُ زملاءك: يظهر تحديك لهم في صفحة «تحدي الكأس»، أو أعطهم هذا الرمز</p>
+                <div dir="ltr" className="font-mono text-4xl font-extrabold tracking-[.2em]" data-testid="room-code">{gs.session.code}</div>
+                <p className="text-sm text-brand-600">عندما يدخلون اضغط «ابدأ». يمكنك البدء وحدك أيضًا.</p>
+                <Button size="xl" variant="gold" className="w-full" loading={beginning} onClick={begin}>ابدأ التحدي الآن ({gs.board.length} {gs.board.length === 1 ? 'لاعب' : 'لاعبين'})</Button>
+              </div>
+            ) : <p className="text-brand-600">بانتظار {gs.board.find((r) => r.id === g.host)?.name ?? 'صاحب التحدي'} ليبدأ التحدي. استعد!</p>
+          ) : <p className="text-brand-600">سيبدأ التحدي عندما يضغط المعلم «ابدأ».</p>}
+          <p className="text-brand-600">أجب بسرعة وبدقة: كل إجابة صحيحة = 10 نقاط.</p>
           {powersOn && (
             <div className="rounded-xl bg-ivory-100 p-3 text-start text-sm">
               <div className="mb-1 font-bold">كل 3 إجابات صحيحة متتالية = رمية حظ 🎲</div>

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Brand, Credit } from '@/components/Logo';
 import { Button, Card, ErrorBox, Field, Input, cx } from '@/components/ui';
 import { OfflineBanner } from '@/components/feedback';
@@ -69,6 +69,7 @@ export default function Join() {
               </Field>
               {error && <ErrorBox error={error} />}
               <Button type="submit" size="lg" className="w-full" loading={busy}>متابعة</Button>
+              <Link to="/practice" className="block text-center font-semibold text-brand-700 underline">🏆 تحدي الكأس: اختر درسًا والعب بنفسك</Link>
             </form>
           ) : (
             <form className="space-y-4" onSubmit={join}>

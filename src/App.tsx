@@ -9,6 +9,7 @@ import SetupNeeded from './pages/SetupNeeded';
 import { Login, Signup, ResetPassword } from './pages/Auth';
 import Join from './pages/student/Join';
 import Play from './pages/student/Play';
+import Practice from './pages/student/Practice';
 
 const Dashboard = lazy(() => import('./pages/teacher/Dashboard'));
 const QuestionBank = lazy(() => import('./pages/teacher/QuestionBank'));
@@ -51,6 +52,8 @@ export default function App() {
         <Route path="/join" element={<Join />} />
         <Route path="/join/:code" element={<Join />} />
         <Route path="/play" element={<Play />} />
+        <Route path="/practice" element={<Practice />} />
+        <Route path="/practice/:code" element={<Practice />} />
         <Route path="/present/:id" element={<RequireTeacher><Present /></RequireTeacher>} />
         <Route path="/t" element={<RequireTeacher><TeacherLayout /></RequireTeacher>}>
           <Route index element={<Dashboard />} />

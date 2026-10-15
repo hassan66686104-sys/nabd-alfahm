@@ -29,6 +29,7 @@ const MESSAGES: Record<string, string> = {
   USE_POWER_FIRST: 'استخدم القدرة التي لديك أولًا.',
   NO_POWER: 'لا توجد لديك قدرة لاستخدامها.',
   INVALID_TARGET: 'اختر زميلًا أو مجموعة أخرى.',
+  LESSON_NOT_FOUND: 'لا يحتوي هذا الدرس أسئلة كافية للتحدي.',
   NETWORK: 'تعذر الاتصال بالخادم. تحقق من اتصال الإنترنت ثم حاول مجددًا.',
   NOT_CONFIGURED: 'لم يُربط التطبيق بقاعدة البيانات بعد. راجع ملف README لإعداد Supabase.',
 };

@@ -63,6 +63,7 @@ export function eventText(e: Pick<GameEvent, 'kind' | 'amount' | 'actor' | 'targ
 }
 
 export function goalText(g: GameSettings): string {
+  if (g.end === 'all') return 'أجب عن أسئلة الدرس كلها، وصاحب أعلى نقاط يفوز بالكأس';
   if (g.end === 'target') return `أول من يصل إلى ${g.target ?? 100} نقطة يفوز بالكأس`;
   return `الأعلى نقاطًا بعد ${g.minutes ?? 10} دقائق يفوز بالكأس`;
 }
@@ -75,3 +76,12 @@ export function formatClock(ms: number): string {
 
 // أخطاء مؤقتة لا تعني خروج الطالب من التحدي
 export const GAME_SOFT_ERRORS = ['FROZEN', 'ALREADY_ANSWERED', 'QUESTION_NOT_FOUND', 'INVALID_ANSWER', 'NO_SPINS', 'NO_POWER', 'USE_POWER_FIRST', 'INVALID_TARGET', 'GAME_OVER', 'GAME_NOT_STARTED'];
+
+// آخر رمز تحديات استخدمه الطالب على هذا الجهاز، للعودة إلى قائمة الدروس
+const PRACTICE_CODE_KEY = 'nabd.practice-code';
+export function lastPracticeCode(): string | null {
+  try { return localStorage.getItem(PRACTICE_CODE_KEY); } catch { return null; }
+}
+export function rememberPracticeCode(code: string) {
+  try { localStorage.setItem(PRACTICE_CODE_KEY, code); } catch { /* التخزين غير متاح */ }
+}

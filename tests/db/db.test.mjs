@@ -536,3 +536,65 @@ test('تحدي الكأس بالوقت: ينتهي تلقائيًا عند ان�
   assert.equal((await anon('select public.game_state($1,$2) as r', [pn.participant_id, pn.token])).rows[0].r.error, 'NOT_A_GAME');
   assert.equal((await state(pn)).session.mode, 'live');
 });
+
+test('التحدي الذاتي: الطالب يختار الدرس ويبدأ وحده أو مع زميل دون المعلم', async () => {
+  // قبل التفعيل لا يعمل أي رمز
+  assert.equal((await anon('select public.practice_lookup($1) as r', ['ZZZZZZ'], '10.9.0.1')).rows[0].r.error, 'INVALID_CODE');
+  const link = await rpc1(A, 'insert into practice_links default values returning *');
+  assert.match(link.code, /^[A-Z2-9]{6}$/);
+  // المعلم ب لا يرى رابط المعلم أ، والطالب لا يقرأ الجدول
+  assert.equal((await B('select count(*)::int n from practice_links')).rows[0].n, 0);
+  await assert.rejects(anon('select * from practice_links'), /permission denied/);
+  const tf = (t) => saveQ(A, { type: 'true_false', answer_format: 'single', text: t, lesson: 'الكواكب' }, [{ text: 'صح', is_correct: true }, { text: 'خطأ', is_correct: false }]);
+  await tf('المريخ كوكب أحمر'); await tf('الشمس نجم'); await tf('القمر كوكب يدور حول الشمس');
+  await saveQ(A, { type: 'open_ended', answer_format: 'open', text: 'صف كوكبًا', lesson: 'الكواكب' });
+
+  const look = (await anon('select public.practice_lookup($1) as r', [link.code.toLowerCase()], '10.9.0.2')).rows[0].r;
+  assert.equal(look.ok, true);
+  assert.equal(look.teacher, 'معلم أ');
+  const planets = look.lessons.find((l) => l.lesson === 'الكواكب');
+  assert.equal(planets.count, 3, 'السؤال المفتوح لا يدخل التحدي');
+  assert.equal(JSON.stringify(look).includes('is_correct'), false);
+
+  const start = async (name, friends) => (await anon('select public.practice_start($1,$2,$3,$4) as r', [link.code, 'الكواكب', name, friends], '10.9.0.3')).rows[0].r;
+  assert.equal((await anon('select public.practice_start($1,$2,$3,false) as r', [link.code, 'درس غير موجود', 'سلمى'])).rows[0].r.error, 'LESSON_NOT_FOUND');
+  assert.equal((await start('س', false)).error, 'NAME_REQUIRED');
+
+  // وحده: يبدأ فورًا، وينتهي التحدي عندما ينهي الأسئلة
+  const solo = await start('سلمى', false);
+  assert.equal(solo.ok, true);
+  const gs = async (p) => (await anon('select public.game_state($1,$2) as r', [p.participant_id, p.token])).rows[0].r;
+  let g = await gs(solo);
+  assert.equal(g.session.status, 'live');
+  assert.equal(g.question.total, 3);
+  for (let i = 0; i < 3; i++) {
+    const q = (await gs(solo)).question;
+    const snap = (await A('select snapshot from session_questions where id=$1', [q.sq_id])).rows[0].snapshot;
+    await anon('select public.game_submit($1,$2,$3,$4::jsonb) as r', [solo.participant_id, solo.token, q.sq_id, JSON.stringify({ option_id: snap.options[0].id })]);
+  }
+  g = await gs(solo);
+  assert.equal(g.session.status, 'ended');
+  assert.equal(g.me.points, 30);
+  assert.equal(g.session.winner.id, solo.participant_id);
+  // النتائج تصل إلى المعلم صاحب الأسئلة
+  assert.equal((await A('select count(*)::int n from responses where session_id=$1', [g.session.id])).rows[0].n, 3);
+
+  // مع زميل: غرفة انتظار تظهر في الرابط، وصاحبها فقط يبدأ
+  const host = await start('ليان', true);
+  assert.equal((await gs(host)).session.status, 'lobby');
+  const rooms = (await anon('select public.practice_lookup($1) as r', [link.code], '10.9.0.2')).rows[0].r.rooms;
+  assert.equal(rooms.length, 1);
+  assert.equal(rooms[0].host, 'ليان');
+  const friend = await join(rooms[0].code, 'ريم');
+  assert.equal(friend.ok, true);
+  assert.equal((await anon('select public.practice_begin($1,$2) as r', [friend.participant_id, friend.token])).rows[0].r.error, 'FORBIDDEN');
+  assert.equal((await anon('select public.practice_begin($1,$2) as r', [host.participant_id, host.token])).rows[0].r.ok, true);
+  g = await gs(friend);
+  assert.equal(g.session.status, 'live');
+  assert.equal(g.board.length, 2);
+  assert.equal((await anon('select public.practice_lookup($1) as r', [link.code], '10.9.0.2')).rows[0].r.rooms.length, 0);
+
+  // إيقاف الرابط يمنع الطلاب
+  await A('update practice_links set enabled=false');
+  assert.equal((await anon('select public.practice_lookup($1) as r', [link.code], '10.9.0.4')).rows[0].r.error, 'INVALID_CODE');
+});

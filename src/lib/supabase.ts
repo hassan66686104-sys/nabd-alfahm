@@ -19,3 +19,7 @@ export function publicAppUrl(): string {
 export function joinUrl(code: string): string {
   return `${publicAppUrl()}/join/${code}`;
 }
+
+export function practiceUrl(code: string): string {
+  return `${publicAppUrl()}/practice/${code}`;
+}

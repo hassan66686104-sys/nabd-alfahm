@@ -298,3 +298,20 @@ export const game = {
     run(supabase.from('game_events').select('id,kind,actor_id,target_id,team_id,amount,created_at').eq('session_id', sessionId).order('id', { ascending: false }).limit(limit)) as Promise<GameEventRow[]>,
 };
 export type { GameEvent };
+
+// ---------- التحدي الذاتي: الطالب يختار الدرس ويبدأ بنفسه ----------
+export interface PracticeLink { owner_id: string; code: string; enabled: boolean }
+export interface PracticePreview { teacher: string; lessons: { lesson: string; count: number }[]; rooms: { code: string; lesson: string; host: string | null; players: number }[] }
+type JoinResult = { participant_id: string; token: string; session_id: string; code: string; alias: string; display_name: string };
+
+export const practice = {
+  // المعلم
+  myLink: () => run(supabase.from('practice_links').select('owner_id,code,enabled').maybeSingle()) as Promise<PracticeLink | null>,
+  createLink: () => run(supabase.from('practice_links').insert({}).select('owner_id,code,enabled').single()) as Promise<PracticeLink>,
+  setEnabled: (ownerId: string, enabled: boolean) => run(supabase.from('practice_links').update({ enabled }).eq('owner_id', ownerId).select('owner_id,code,enabled').single()) as Promise<PracticeLink>,
+  // الطالب
+  lookup: (code: string) => run(supabase.rpc('practice_lookup', { p_code: code })) as Promise<StudentResult<PracticePreview>>,
+  start: (code: string, lesson: string, name: string, withFriends: boolean) =>
+    run(supabase.rpc('practice_start', { p_code: code, p_lesson: lesson, p_name: name, p_with_friends: withFriends })) as Promise<StudentResult<JoinResult>>,
+  begin: (participantId: string, token: string) => run(supabase.rpc('practice_begin', { p_participant: participantId, p_token: token })) as Promise<StudentResult<object>>,
+};

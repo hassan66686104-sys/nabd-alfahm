@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Dices, LibraryBig, Timer, Trash2, Trophy, Users } from 'lucide-react';
 import { Badge, Button, Card, ErrorBox, Field, Input, PageHeader, Select, Toggle, cx } from '@/components/ui';
 import QuestionPicker from '@/components/QuestionPicker';
+import PracticeLinkCard from '@/components/PracticeLinkCard';
 import { useFeedback } from '@/components/feedback';
 import { createSession, listQuestions } from '@/lib/api';
 import { toAppError } from '@/lib/errors';
@@ -77,6 +78,9 @@ export default function NewChallenge() {
     <div className="mx-auto max-w-4xl space-y-4">
       <PageHeader title={<span className="flex items-center gap-2"><Trophy className="h-7 w-7 text-gold-400" />تحدي الكأس</span>}
         subtitle="يلعب الطلاب وحدهم: كل طالب ينتقل إلى السؤال التالي فور إجابته، ويجمع النقاط ويرمي رقم الحظ." />
+
+      <PracticeLinkCard />
+      <h2 className="pt-2 text-xl font-extrabold">أو أنشئ تحديًا للفصل كله الآن</h2>
 
       <Card className="space-y-3">
         <h2 className="text-lg font-bold">1. الدرس والأسئلة <Badge>{items.length}</Badge></h2>
