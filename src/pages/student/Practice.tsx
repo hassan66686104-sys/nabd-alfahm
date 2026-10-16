@@ -1,5 +1,5 @@
 // التحدي الذاتي: الطالب يدخل الموقع، يختار الدرس، ويبدأ فورًا وحده أو مع زملائه دون رمز ولا تدخل المعلم
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import HomeButton from '@/components/HomeButton';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Loader2, RefreshCw, Trophy, User, Users } from 'lucide-react';
@@ -75,8 +75,16 @@ export default function Practice() {
     nav('/play');
   };
 
-  // الاسم اختياري: من لا يكتب اسمه يلعب باسم «بطل»
-  const playerName = () => (name.trim().length >= 2 ? name.trim() : 'بطل');
+  // الاسم إجباري في كل التحديات
+  const nameRef = useRef<HTMLInputElement>(null);
+  const nameOk = name.trim().length >= 2;
+  const needName = () => {
+    if (nameOk) return false;
+    setError('اكتب اسمك أولًا (حرفان على الأقل)');
+    nameRef.current?.focus();
+    return true;
+  };
+  const playerName = () => name.trim();
 
   // الضغط على الدرس يبدأ التحدي مباشرة، وفي «أكثر من درس» يحدده فقط
   const tapLesson = (l: string) => {
@@ -84,6 +92,7 @@ export default function Practice() {
     setPicked((cur) => cur.includes(l) ? cur.filter((x) => x !== l) : [...cur, l]);
   };
   const start = async (pick: string[]) => {
+    if (needName()) return;
     const key = pick.length === 1 ? pick[0] : 'many';
     setLesson(key);
     setBusy(key); setError(null);
@@ -95,6 +104,7 @@ export default function Practice() {
   };
 
   const joinRoom = async (roomCode: string) => {
+    if (needName()) return;
     setBusy(roomCode); setError(null);
     try {
       const r = await student.join(roomCode, playerName(), null);
@@ -157,7 +167,7 @@ export default function Practice() {
                 <div className="text-sm text-brand-600">تحديات {data.teacher}</div>
                 {title}
               </div>
-              <Field label="اسمك (اختياري)"><Input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} autoComplete="name" className="text-lg" placeholder="بطل" /></Field>
+              <Field label="اسمك" hint="مطلوب ليظهر في الترتيب وعند المعلم"><Input ref={nameRef} value={name} onChange={(e) => { setName(e.target.value); setError(null); }} maxLength={40} autoComplete="name" className="text-lg" placeholder="اكتب اسمك" required aria-invalid={!!error && !nameOk} /></Field>
               <AvatarPicker value={avatar} onChange={setAvatar} />
               <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="طريقة اللعب">
                 {([[false, 'وحدي', User], [true, 'مع زملائي', Users]] as const).map(([v, label, Icon]) => (

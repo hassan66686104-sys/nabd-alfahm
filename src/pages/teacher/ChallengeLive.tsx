@@ -6,6 +6,7 @@ import { Badge, Button, Card, ErrorBox, PageHeader, Spinner } from '@/components
 import { useFeedback } from '@/components/feedback';
 import { JoinInfo } from '@/components/live';
 import { EventFeed, Leaderboard, Podium, TeamScores } from '@/components/challenge';
+import WaitingRoom from '@/components/WaitingRoom';
 import { useTick } from '@/components/QuestionView';
 import { useChallenge } from '@/hooks/useChallenge';
 import { game } from '@/lib/api';
@@ -51,6 +52,19 @@ export default function ChallengeLive() {
   };
 
   const target = s.game.end === 'target' ? s.game.target ?? 100 : null;
+  // المعلم يتحكم في الوقت: قبل البدء يعدّل المدة، وأثناء اللعب يزيدها أو ينقصها
+  const addTime = async (m: number) => {
+    setError(null);
+    try { await game.addTime(s.id, m); await c.reload(); toast(m > 0 ? `أضيفت ${m} دقيقة` : `أُنقصت ${-m} دقيقة`); }
+    catch (e) { setError(toAppError(e).message); }
+  };
+  const timeButtons = (steps: number[]) => (
+    <div className="flex flex-wrap justify-center gap-1.5" role="group" aria-label="تعديل الوقت" data-testid="time-controls">
+      {steps.map((m) => (
+        <Button key={m} size="sm" variant={m > 0 ? 'soft' : 'outline'} onClick={() => addTime(m)}>{m > 0 ? `+${m}` : `−${-m}`} د</Button>
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -73,13 +87,23 @@ export default function ChallengeLive() {
           <JoinInfo code={s.code} count={c.joined} />
           <div className="text-center">
             {s.status === 'lobby'
-              ? <><Badge tone="gold">بانتظار البدء</Badge><p className="mt-2 max-w-xs text-brand-600">عندما ينضم الطلاب اضغط «ابدأ التحدي». {c.questionCount} سؤالًا جاهزًا.</p></>
+              ? <div className="space-y-2">
+                  <Badge tone="gold">بانتظار البدء</Badge>
+                  <p className="max-w-xs text-brand-600">عندما ينضم الطلاب اضغط «ابدأ التحدي». {c.questionCount} سؤالًا جاهزًا.</p>
+                  <div className="text-sm font-semibold text-brand-700" data-testid="planned-minutes">{s.game.minutes ? `⏱️ مدة اللعب: ${s.game.minutes} دقيقة` : '⏱️ بلا حد للوقت'}</div>
+                  {timeButtons(s.game.minutes ? [-5, -1, 1, 5] : [5, 10])}
+                </div>
               : timeLeft != null
-                ? <div className="inline-flex items-center gap-2 rounded-2xl bg-brand-700 px-5 py-3 text-3xl font-extrabold tabular-nums text-white" role="timer"><Timer className="h-7 w-7" />{formatClock(timeLeft)}</div>
-                : <Badge tone="green">جارٍ الآن · الهدف {target} نقطة</Badge>}
+                ? <div className="space-y-2">
+                    <div className="inline-flex items-center gap-2 rounded-2xl bg-brand-700 px-5 py-3 text-3xl font-extrabold tabular-nums text-white" role="timer"><Timer className="h-7 w-7" />{formatClock(timeLeft)}</div>
+                    {timeButtons([-5, -1, 1, 5])}
+                  </div>
+                : <div className="space-y-2"><Badge tone="green">جارٍ الآن · الهدف {target} نقطة</Badge>{timeButtons([5, 10])}<p className="text-xs text-brand-600">أضف وقتًا لتحديد موعد نهاية للتحدي</p></div>}
           </div>
         </Card>
       )}
+
+      {s.status === 'lobby' && <Card className="bg-gradient-to-br from-violet-50 to-white"><WaitingRoom people={c.waiting} sound /></Card>}
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <Card className="space-y-3">

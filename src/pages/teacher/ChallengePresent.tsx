@@ -5,6 +5,7 @@ import { Expand, Timer, Trophy } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { ErrorBox, Spinner } from '@/components/ui';
 import { JoinInfo } from '@/components/live';
+import WaitingRoom from '@/components/WaitingRoom';
 import { EventFeed, Leaderboard, Podium, TeamScores } from '@/components/challenge';
 import SoundToggle from '@/components/SoundToggle';
 import { useTick } from '@/components/QuestionView';
@@ -58,6 +59,7 @@ export default function ChallengePresent({ id }: { id: string }) {
         ) : (
           <>
             {s.status === 'lobby' && <div className="flex justify-center"><JoinInfo code={s.code} count={c.joined} large /></div>}
+            {s.status === 'lobby' && <div className="rounded-3xl bg-white/90 p-6 shadow-card"><WaitingRoom people={c.waiting.map((w) => ({ ...w, name: w.shown }))} large sound /></div>}
             {s.status === 'live' && <div className="flex justify-center"><JoinInfo code={s.code} count={c.joined} compact /></div>}
             <TeamScores teams={c.teamRows} large />
             <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">

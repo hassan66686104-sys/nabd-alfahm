@@ -35,6 +35,9 @@ test('الأسئلة الفورية: سؤال رأي بنعم/لا ثم سؤال
   const s1 = await student(browser, code, 'منى');
   const s2 = await student(browser, code, 'يوسف');
   await expect(t.getByTestId('joined-count').first()).toHaveText('2');
+  // قبل أول سؤال يرى المعلم من انضم بالاسم
+  await expect(t.getByTestId('waiting-player')).toHaveCount(2);
+  await expect(t.getByTestId('waiting-room').getByText('يوسف')).toBeVisible();
 
   // سؤال رأي شفهي بلا نص وبلا إجابة صحيحة
   await t.getByRole('button', { name: 'اطرح السؤال الآن' }).click();
@@ -66,6 +69,26 @@ test('الأسئلة الفورية: سؤال رأي بنعم/لا ثم سؤال
   await expect(s2.getByText(/إجابتك غير صحيحة/)).toBeVisible();
   await s1.screenshot({ path: `${SHOTS}/17-instant-student.png` });
   await expect(t.getByText('الأسئلة السابقة')).toBeVisible();
+
+  // سؤال مفتوح: يكتب الطالب، وتظهر إجابته عند المعلم وعلى شاشة العرض فورًا دون اعتماد
+  const present = await ctx.newPage();
+  await t.getByRole('radio', { name: /يكتب الطالب/ }).click();
+  await t.getByLabel('نص السؤال').fill('ما أجمل ما تعلمته اليوم؟');
+  await t.getByRole('button', { name: 'اطرح السؤال الآن' }).click();
+  const sessionId = await t.evaluate(() => localStorage.getItem('nabd.instant-session'));
+  await present.goto(`/present/${sessionId}`);
+  await expect(present.getByText('ما أجمل ما تعلمته اليوم؟')).toBeVisible();
+  for (const [p, text] of [[s1, 'الصدق منجاة'], [s2, 'حب الوطن']] as const) {
+    await expect(p.getByText('ما أجمل ما تعلمته اليوم؟')).toBeVisible();
+    await p.getByLabel('إجابتك').fill(text);
+    await p.getByRole('button', { name: 'إرسال الإجابة' }).click();
+  }
+  await expect(t.getByTestId('open-answers').getByText('الصدق منجاة')).toBeVisible();
+  await expect(t.getByTestId('open-answers').getByText('حب الوطن')).toBeVisible();
+  await expect(present.getByTestId('present-answer')).toHaveCount(2);
+  await t.screenshot({ path: `${SHOTS}/50-instant-open-teacher.png`, fullPage: true });
+  await present.screenshot({ path: `${SHOTS}/51-instant-open-screen.png`, fullPage: true });
+  await present.close();
 
   // الإنهاء يحفظ تقريرًا
   await t.getByRole('button', { name: 'إنهاء وعرض التقرير' }).click();

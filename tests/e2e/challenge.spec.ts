@@ -61,7 +61,19 @@ test('تحدي الكأس: لعب ذاتي ورقم الحظ والفوز بال
   const s1 = await student(browser, code, 'منى');
   const s2 = await student(browser, code, 'يوسف');
   await expect(t.getByTestId('joined-count').first()).toHaveText('2');
+  // غرفة الانتظار تعرض الطالبين، والمعلم يحدد وقت اللعب قبل البدء
+  await expect(t.getByTestId('waiting-player')).toHaveCount(2);
+  await expect(t.getByTestId('waiting-room').getByText('منى')).toBeVisible();
+  await t.getByTestId('time-controls').getByRole('button', { name: '+10 د' }).click();
+  await expect(t.getByTestId('planned-minutes')).toHaveText('⏱️ مدة اللعب: 10 دقيقة');
+  await t.getByTestId('time-controls').getByRole('button', { name: '+5 د' }).click();
+  await expect(t.getByTestId('planned-minutes')).toHaveText('⏱️ مدة اللعب: 15 دقيقة');
+  await t.screenshot({ path: `${SHOTS}/52-challenge-waiting.png`, fullPage: true });
   await t.getByRole('button', { name: 'ابدأ التحدي' }).click();
+  // أثناء اللعب يزيد المعلم الوقت أو ينقصه
+  await expect(t.getByRole('timer')).toContainText(/^1[45]:/);
+  await t.getByTestId('time-controls').getByRole('button', { name: '−5 د' }).click();
+  await expect(t.getByRole('timer')).toContainText(/^(9|10):/);
 
   // يوسف يخطئ فيرى الإجابة الصحيحة ثم ينتقل وحده للسؤال التالي
   await answer(s2, 1, 'خطأ');

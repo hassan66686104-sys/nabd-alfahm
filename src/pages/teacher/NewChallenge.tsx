@@ -28,13 +28,14 @@ export default function NewChallenge() {
   const [end, setEnd] = useState<'target' | 'time'>('target');
   const [target, setTarget] = useState('100');
   const [minutes, setMinutes] = useState('10');
+  // في «من يصل أولًا» الوقت حد أقصى اختياري؛ فارغ = بلا حد
+  const [maxMinutes, setMaxMinutes] = useState('');
   const [powers, setPowers] = useState(true);
   const [heartsOn, setHeartsOn] = useState(true);
   const [helpsOn, setHelpsOn] = useState(true);
   const [prize, setPrize] = useState('');
   const [teamsOn, setTeamsOn] = useState(false);
   const [teams, setTeams] = useState<string[]>(['المجموعة الأولى', 'المجموعة الثانية']);
-  const [anonymous, setAnonymous] = useState(settings.anonymous);
   const [hideNames, setHideNames] = useState(settings.hide_names);
   const [picker, setPicker] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -61,15 +62,17 @@ export default function NewChallenge() {
     const t = Number(target); const m = Number(minutes);
     if (end === 'target' && !(t >= 20 && t <= 10000)) return setError('النقاط المطلوبة للفوز بين 20 و10000');
     if (end === 'time' && !(m >= 1 && m <= 120)) return setError('مدة التحدي بين دقيقة و120 دقيقة');
+    const mx = Number(maxMinutes);
+    if (end === 'target' && maxMinutes.trim() && !(mx >= 1 && mx <= 120)) return setError('الحد الأقصى للوقت بين دقيقة و120 دقيقة');
     const teamNames = teams.map((x) => x.trim()).filter(Boolean);
     if (teamsOn && teamNames.length < 2) return setError('أضف مجموعتين على الأقل');
     setBusy(true);
     try {
       const s = await createSession({
         title: title.trim(), class_id: null, subject_id: items[0]?.subject_id ?? null, grade: items[0]?.grade ?? '', unit: items[0]?.unit ?? '', lesson: (chosen.join(' + ') || items[0]?.lesson || '').slice(0, 160),
-        anonymous, hide_names: hideNames, hide_results: false, leaderboard_enabled: true, teams_enabled: teamsOn, auto_approve_open: false,
+        anonymous: false, hide_names: hideNames, hide_results: false, leaderboard_enabled: true, teams_enabled: teamsOn, auto_approve_open: false,
         mode: 'self',
-        game: { end, ...(end === 'target' ? { target: t } : { minutes: m }), powers, hearts: heartsOn ? 3 : 0, helps: helpsOn, ...(prize.trim() ? { prize: prize.trim().slice(0, 80) } : {}) },
+        game: { end, ...(end === 'target' ? { target: t, ...(maxMinutes.trim() ? { minutes: mx } : {}) } : { minutes: m }), powers, hearts: heartsOn ? 3 : 0, helps: helpsOn, ...(prize.trim() ? { prize: prize.trim().slice(0, 80) } : {}) },
       }, items.map((q) => ({ question_id: q.id })), teamsOn ? teamNames.map((name, i) => ({ name, color: TEAM_COLORS[i % TEAM_COLORS.length] })) : []);
       toast('تم إنشاء التحدي');
       nav(`/t/challenge/${s.id}`);
@@ -136,8 +139,11 @@ export default function NewChallenge() {
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {end === 'target'
-            ? <Field label="النقاط المطلوبة للكأس" hint="كل إجابة صحيحة = 10 نقاط"><Input type="number" min={20} max={10000} step={10} value={target} onChange={(e) => setTarget(e.target.value)} /></Field>
-            : <Field label="مدة التحدي بالدقائق"><Input type="number" min={1} max={120} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></Field>}
+            ? <>
+              <Field label="النقاط المطلوبة للكأس" hint="كل إجابة صحيحة = 10 نقاط"><Input type="number" min={20} max={10000} step={10} value={target} onChange={(e) => setTarget(e.target.value)} /></Field>
+              <Field label="الحد الأقصى للوقت بالدقائق (اختياري)" hint="اتركه فارغًا لتحدٍّ بلا وقت. يمكنك زيادته أو إنقاصه أثناء اللعب"><Input type="number" min={1} max={120} value={maxMinutes} onChange={(e) => setMaxMinutes(e.target.value)} placeholder="بلا حد" /></Field>
+            </>
+            : <Field label="مدة التحدي بالدقائق" hint="يمكنك زيادتها أو إنقاصها أثناء اللعب"><Input type="number" min={1} max={120} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></Field>}
           <Field label="الجائزة (اختياري)" hint="تظهر للفائز وعلى شاشة العرض"><Input value={prize} onChange={(e) => setPrize(e.target.value)} maxLength={80} placeholder="مثال: كأس الفصل وشهادة تميّز" /></Field>
         </div>
       </Card>
@@ -167,7 +173,6 @@ export default function NewChallenge() {
             {teams.length < 6 && <Button size="sm" variant="soft" onClick={() => setTeams((l) => [...l, `المجموعة ${l.length + 1}`])}>مجموعة أخرى</Button>}
           </div>
         )}
-        <Toggle checked={anonymous} onChange={setAnonymous} label="بدون أسماء حقيقية" hint="يحصل كل طالب على اسم مستعار" />
         <Toggle checked={hideNames} onChange={setHideNames} label="إظهار الأسماء المستعارة فقط في الترتيب" />
       </Card>
 

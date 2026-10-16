@@ -72,7 +72,13 @@ export function useChallenge(sessionId: string | undefined) {
     const teamRows: GameTeamRow[] = teams.map((t) => ({ id: t.id, name: t.name, color: t.color, points: rows.filter((r) => r.team_id === t.id).reduce((s, r) => s + r.points, 0) }));
     const feed: GameEvent[] = events.map((e) => ({ id: e.id, kind: e.kind, amount: e.amount, actor: name(e.actor_id), target: name(e.target_id), team: e.team_id ? teamById.get(e.team_id)?.name ?? null : null, at: e.created_at }));
     const winner = session?.winner_id ? { id: session.winner_id, name: name(session.winner_id) ?? '', avatar: byId.get(session.winner_id)?.avatar ?? null } : null;
-    return { rows, teamRows, feed, winner, joined: participants.filter((p) => !p.is_removed).length };
+    // غرفة الانتظار: كل من انضم بترتيب دخوله (المعلم يرى الاسم الحقيقي، وشاشة العرض تحترم إخفاء الأسماء)
+    const present = participants.filter((p) => !p.is_removed).sort((a, b) => a.joined_at.localeCompare(b.joined_at));
+    const waiting = present.map((p) => {
+      const t = p.team_id ? teamById.get(p.team_id) : undefined;
+      return { id: p.id, name: p.display_name, shown: name(p.id) ?? p.alias, avatar: p.avatar ?? null, team: t?.name ?? null, color: t?.color ?? null };
+    });
+    return { rows, teamRows, feed, winner, waiting, joined: present.length };
   }, [session, participants, teams, players, events, clockOffset]);
 
   return { session, setSession, questionCount, error, loading, clockOffset, reload, ...view };

@@ -72,7 +72,7 @@ export function eventText(e: Pick<GameEvent, 'kind' | 'amount' | 'actor' | 'targ
 
 export function goalText(g: GameSettings): string {
   if (g.end === 'all') return 'أجب عن أسئلة الدرس كلها، وصاحب أعلى نقاط يفوز بالكأس';
-  if (g.end === 'target') return `أول من يصل إلى ${g.target ?? 100} نقطة يفوز بالكأس`;
+  if (g.end === 'target') return `أول من يصل إلى ${g.target ?? 100} نقطة يفوز بالكأس${g.minutes ? ` خلال ${g.minutes} دقيقة` : ''}`;
   return `الأعلى نقاطًا بعد ${g.minutes ?? 10} دقائق يفوز بالكأس`;
 }
 

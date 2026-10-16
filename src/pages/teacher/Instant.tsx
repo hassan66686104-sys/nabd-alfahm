@@ -1,26 +1,28 @@
 // «الأسئلة الفورية»: يطرح المعلم سؤالًا (مكتوبًا أو شفهيًا) ويجيب الطلاب بنعم/لا أو صح/خطأ،
-// وتظهر النتيجة لحظيًا. كل الأسئلة تُطرح في حصة واحدة مستمرة وتُحفظ في تقرير عند إنهائها.
+// أو يكتبون إجابة حرة تظهر على الشاشة فور إرسالها، وتظهر النتيجة لحظيًا. كل الأسئلة تُطرح في حصة واحدة مستمرة وتُحفظ في تقرير عند إنهائها.
 import { useEffect, useMemo, useState } from 'react';
+import WaitingRoom from '@/components/WaitingRoom';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Eye, Lock, MessageCircleQuestion, MonitorPlay, Send, Square, ThumbsDown, ThumbsUp, XCircle } from 'lucide-react';
+import { CheckCircle2, Eye, Lock, MessageCircleQuestion, MonitorPlay, PenLine, Send, Square, ThumbsDown, ThumbsUp, XCircle } from 'lucide-react';
 import { Badge, Button, Card, ErrorBox, Input, PageHeader, Spinner, cx } from '@/components/ui';
 import { useFeedback } from '@/components/feedback';
 import { JoinInfo, SyncBadge } from '@/components/live';
-import { addInstantQuestion, createSession, getSession, live } from '@/lib/api';
+import { addInstantQuestion, createSession, getSession, live, updateSession } from '@/lib/api';
 import { toAppError } from '@/lib/errors';
 import { isPoll } from '@/lib/stats';
 import { pct } from '@/lib/text';
 import { uuid } from '@/lib/uuid';
 import { useSettings } from '@/hooks/useAuth';
 import { useLiveSession } from '@/hooks/useLiveSession';
-import type { SessionQuestion, Snapshot } from '@/lib/types';
+import type { Participant, ResponseRow, SessionQuestion, Snapshot } from '@/lib/types';
 import { openPresent } from '@/lib/native';
 
 const STORE_KEY = 'nabd.instant-session';
-type Mode = 'yes_no' | 'true_false';
-const MODES: Record<Mode, { label: string; options: [string, string] }> = {
+type Mode = 'yes_no' | 'true_false' | 'open';
+const MODES: Record<Mode, { label: string; options: [string, string] | null }> = {
   yes_no: { label: 'نعم / لا', options: ['نعم', 'لا'] },
   true_false: { label: 'صح / خطأ', options: ['صح', 'خطأ'] },
+  open: { label: '✍️ يكتب الطالب', options: null },
 };
 // -1 = سؤال رأي بلا إجابة صحيحة
 type Correct = -1 | 0 | 1;
@@ -34,7 +36,16 @@ function store(id: string | null) {
 }
 
 function buildSnapshot(text: string, mode: Mode, correct: Correct): Snapshot {
-  const [a, b] = MODES[mode].options;
+  if (mode === 'open') {
+    // سؤال مفتوح بلا تصحيح: كل إجابة تظهر على الشاشة فور إرسالها
+    return {
+      question_id: null, type: 'open_ended', answer_format: 'open', text: text.trim() || 'اكتب إجابتك',
+      stimulus_kind: 'none', stimulus_text: null, stimulus_source: null, image_url: null,
+      hint: null, explanation: null, bloom: 'understand', difficulty: 'easy', skill: '', unit: '', lesson: '', domain: '',
+      answer_key: { poll: true }, options: [],
+    };
+  }
+  const [a, b] = MODES[mode].options!;
   return {
     question_id: null,
     type: 'true_false',
@@ -78,7 +89,7 @@ function InstantStart({ onStarted }: { onStarted: (id: string) => void }) {
       const s = await createSession({
         title, class_id: null, subject_id: null, grade: '', unit: '', lesson: '',
         anonymous: settings.anonymous, hide_names: settings.hide_names, hide_results: false,
-        leaderboard_enabled: false, teams_enabled: false, auto_approve_open: false, is_quick: true,
+        leaderboard_enabled: false, teams_enabled: false, auto_approve_open: true, is_quick: true,
       }, [], []);
       onStarted(s.id);
     } catch (e) { setError(toAppError(e).message); } finally { setBusy(false); }
@@ -86,7 +97,7 @@ function InstantStart({ onStarted }: { onStarted: (id: string) => void }) {
   return (
     <div className="w-full space-y-4">
       <PageHeader title={<span className="flex items-center gap-2"><MessageCircleQuestion className="h-8 w-8 text-gold-400" /> الأسئلة الفورية</span>}
-        subtitle="اطرح سؤالًا في أي لحظة من الدرس، ويجيب الطلاب من أجهزتهم بنعم أو لا، أو صح أو خطأ." />
+        subtitle="اطرح سؤالًا في أي لحظة من الدرس، ويجيب الطلاب من أجهزتهم بنعم أو لا، أو صح أو خطأ، أو يكتبون إجابتهم فتظهر على الشاشة فورًا." />
       <Card className="space-y-4 p-6 text-center">
         <div className="flex justify-center gap-3 text-brand-700"><ThumbsUp className="h-10 w-10" /><ThumbsDown className="h-10 w-10" /></div>
         <p className="text-lg">ابدأ جلسة واحدة، اعرض الرمز على الطلاب، ثم اطرح ما تشاء من الأسئلة واحدًا تلو الآخر دون تجهيز مسبق.</p>
@@ -118,6 +129,7 @@ function InstantLive({ sessionId, onEnded }: { sessionId: string; onEnded: () =>
   };
 
   const ask = () => act('ask', async () => {
+    if (mode === 'open' && !session?.auto_approve_open) await updateSession(sessionId, { auto_approve_open: true });
     const sq = await addInstantQuestion(sessionId, buildSnapshot(text, mode, correct));
     await live.push(sq.id, null);
     setText('');
@@ -152,10 +164,10 @@ function InstantLive({ sessionId, onEnded }: { sessionId: string; onEnded: () =>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="space-y-4">
           <h2 className="text-xl font-extrabold">اطرح سؤالًا</h2>
-          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="نوع الإجابة">
+          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="نوع الإجابة">
             {(Object.keys(MODES) as Mode[]).map((m) => (
               <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => { setMode(m); setCorrect(-1); }}
-                className={cx('rounded-2xl border-2 p-4 text-xl font-extrabold', mode === m ? 'border-brand-700 bg-brand-50 text-brand-800' : 'border-brand-100 text-brand-600')}>
+                className={cx('rounded-2xl border-2 p-3 text-lg font-extrabold sm:p-4 sm:text-xl', mode === m ? 'border-brand-700 bg-brand-50 text-brand-800' : 'border-brand-100 text-brand-600')}>
                 {MODES[m].label}
               </button>
             ))}
@@ -163,30 +175,38 @@ function InstantLive({ sessionId, onEnded }: { sessionId: string; onEnded: () =>
           <Input value={text} onChange={(e) => setText(e.target.value)} maxLength={300} className="h-14 text-lg"
             placeholder="اكتب السؤال (اختياري، أو اطرحه شفهيًا)" aria-label="نص السؤال"
             onKeyDown={(e) => { if (e.key === 'Enter' && !busy) void ask(); }} />
+          {mode === 'open' ? (
+            <p className="flex items-center gap-2 rounded-xl bg-brand-50 p-3 text-brand-700"><PenLine className="h-5 w-5 shrink-0" />يكتب كل طالب إجابته، وتظهر على الشاشة فور إرسالها دون أن تعتمدها.</p>
+          ) : (
           <div className="space-y-2">
             <div className="text-sm font-semibold text-brand-700">الإجابة الصحيحة</div>
             <div className="flex flex-wrap gap-2">
               {([-1, 0, 1] as Correct[]).map((c) => (
                 <button key={c} type="button" aria-pressed={correct === c} onClick={() => setCorrect(c)}
                   className={cx('rounded-xl border-2 px-4 py-2 font-bold', correct === c ? 'border-brand-700 bg-brand-700 text-white' : 'border-brand-100 text-brand-700')}>
-                  {c === -1 ? 'لا توجد (سؤال رأي)' : MODES[mode].options[c]}
+                  {c === -1 ? 'لا توجد (سؤال رأي)' : MODES[mode].options![c]}
                 </button>
               ))}
             </div>
           </div>
+          )}
           <Button size="xl" variant="gold" className="w-full" loading={busy === 'ask'} disabled={!!busy && busy !== 'ask'} icon={<Send className="h-6 w-6" />} onClick={ask}>
             اطرح السؤال الآن
           </Button>
           <p className="text-sm text-brand-600">طرح سؤال جديد يُغلق السؤال السابق تلقائيًا.</p>
         </Card>
 
-        {current ? (
+        {current?.snapshot.answer_format === 'open' ? (
+          <OpenAnswers sq={current} responses={responses} participants={participants} joined={joined} busy={busy}
+            onClose={() => act('close', () => live.close(current.id))} />
+        ) : current ? (
           <CurrentResult sq={current} responses={responses} joined={joined} busy={busy}
             onClose={() => act('close', () => live.close(current.id))}
             onReveal={() => act('reveal', () => live.reveal(current.id))} />
         ) : (
-          <Card className="flex items-center justify-center p-10 text-center text-lg text-brand-600">
-            ستظهر نتيجة السؤال هنا لحظة إجابة الطلاب.
+          <Card className="space-y-3 bg-gradient-to-br from-violet-50 to-white">
+            <WaitingRoom sound people={participants.filter((p) => !p.is_removed).map((p) => ({ id: p.id, name: p.display_name, avatar: p.avatar }))} />
+            <p className="text-sm text-brand-600">ستظهر نتيجة السؤال هنا لحظة إجابة الطلاب.</p>
           </Card>
         )}
       </div>
@@ -247,12 +267,43 @@ function CurrentResult({ sq, responses, joined, busy, onClose, onReveal }: {
   );
 }
 
+// إجابات السؤال المفتوح: تظهر كل إجابة لحظة إرسالها (الكلام غير اللائق يُحجب تلقائيًا)
+function OpenAnswers({ sq, responses, participants, joined, busy, onClose }: {
+  sq: SessionQuestion; responses: ResponseRow[]; participants: Participant[]; joined: number; busy: string | null; onClose: () => void;
+}) {
+  const rs = responses.filter((r) => r.sq_id === sq.id).sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const shown = rs.filter((r) => !r.flagged);
+  const nameOf = (id: string) => participants.find((p) => p.id === id)?.display_name ?? '';
+  return (
+    <Card className="space-y-3" aria-live="polite">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <h2 className="text-xl font-extrabold">{sq.snapshot.text}</h2>
+        {sq.status === 'open' ? <Badge tone="green">مفتوح للكتابة</Badge> : <Badge tone="gray">مغلق</Badge>}
+      </div>
+      <div className="text-lg font-bold text-brand-700"><span data-testid="instant-answered">{rs.length}</span> من {Math.max(joined, rs.length)} كتبوا</div>
+      {shown.length === 0 ? <p className="py-6 text-center text-brand-600">تظهر إجابات الطلاب هنا وعلى شاشة العرض لحظة إرسالها.</p> : (
+        <div className="grid max-h-[28rem] gap-2 overflow-y-auto sm:grid-cols-2" data-testid="open-answers">
+          {shown.map((r) => (
+            <div key={r.id} className="animate-bounceIn rounded-2xl bg-ivory-100 p-3">
+              <div className="text-lg">{r.answer.text}</div>
+              <div className="mt-1 text-sm text-brand-600">— {nameOf(r.participant_id)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      {rs.length > shown.length && <p className="text-sm text-brand-600">حُجبت {rs.length - shown.length} إجابة فيها كلمات غير لائقة.</p>}
+      {sq.status === 'open' && <Button variant="outline" loading={busy === 'close'} icon={<Lock className="h-5 w-5" />} onClick={onClose}>أغلق الكتابة</Button>}
+    </Card>
+  );
+}
+
 function HistoryRow({ sq, n, responses }: { sq: SessionQuestion; n: number; responses: { sq_id: string; answer: { option_id?: string } }[] }) {
   const { total, per } = counts(sq, responses);
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-50 pb-2">
       <span className="min-w-0 flex-1"><b>{n}.</b> {sq.snapshot.text}</span>
       <span className="flex gap-2 text-sm">
+        {sq.snapshot.answer_format === 'open' && <Badge tone="gray">{total} إجابة مكتوبة</Badge>}
         {sq.snapshot.options.map((o, i) => (
           <Badge key={o.id} tone={!isPoll(sq) && o.is_correct ? 'green' : 'gray'}>{o.text}: {per[i]}{total ? ` (${pct((per[i] / total) * 100)})` : ''}</Badge>
         ))}

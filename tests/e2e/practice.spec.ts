@@ -69,7 +69,7 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   if (await mine.isVisible()) await mine.click();
   await expect(solo.getByText(`تحديات ${tname}`)).toBeVisible();
   await expect(solo.getByLabel('رمز التحديات')).toHaveCount(0);
-  await solo.getByLabel('اسمك (اختياري)').fill('سلمى');
+  await solo.getByPlaceholder('اكتب اسمك').fill('سلمى');
   // الطالبة تختار شخصيتها: سيارة سباق
   await solo.getByRole('tab', { name: 'سيارات ومركبات' }).click();
   await solo.getByRole('radio', { name: 'سيارة سباق' }).click();
@@ -95,14 +95,14 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   // طالبة تنشئ غرفة، وزميلتها المتصلة تراها في القائمة وتنضم
   const host = await phone(browser);
   await host.goto(`/practice/${code}`);
-  await host.getByLabel('اسمك (اختياري)').fill('ليان');
+  await host.getByPlaceholder('اكتب اسمك').fill('ليان');
   await host.getByRole('radio', { name: 'مع زملائي' }).click();
   await host.getByTestId('lesson').filter({ hasText: 'الأخلاق' }).click();
   await expect(host.getByTestId('room-code')).toBeVisible();
 
   const friend = await phone(browser);
   await friend.goto(`/practice/${code}`);
-  await friend.getByLabel('اسمك (اختياري)').fill('ريم');
+  await friend.getByPlaceholder('اكتب اسمك').fill('ريم');
   await expect(friend.getByText('ليان · الأخلاق')).toBeVisible();
   await friend.getByRole('button', { name: 'انضم' }).click();
   await expect(friend.getByText('بانتظار ليان ليبدأ التحدي')).toBeVisible();
@@ -124,7 +124,11 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   // منافسة بأكثر من درس: الطالب يحدد الألغاز والمعلومات العامة ثم يبدأ
   const multi = await phone(browser);
   await multi.goto(`/practice/${code}`);
-  await multi.getByLabel('اسمك (اختياري)').fill('نورة');
+  // الاسم إجباري: لا يبدأ التحدي قبل كتابته
+  await multi.getByTestId('lesson').filter({ hasText: 'ألغاز' }).click();
+  await expect(multi.getByText('اكتب اسمك أولًا (حرفان على الأقل)')).toBeVisible();
+  await expect(multi).toHaveURL(/\/practice\//);
+  await multi.getByPlaceholder('اكتب اسمك').fill('نورة');
   await multi.getByTestId('multi-lessons').click();
   await expect(multi.getByTestId('start-many')).toBeDisabled();
   await multi.getByTestId('lesson').filter({ hasText: 'ألغاز' }).click();

@@ -752,3 +752,48 @@ test('منافسة بعدة دروس، واستبعاد الأسئلة الكت�
   const lessons = (await anon('select public.practice_lookup($1) as r', [link.code], '10.9.2.1')).rows[0].r.lessons.map((l) => l.lesson);
   for (const l of ['ألغاز', 'معلومات عامة', 'ثقافة إسلامية']) assert.ok(lessons.includes(l), l);
 });
+
+test('سؤال مفتوح فوري، اسم إجباري في التحديات، وتحكم المعلم في الوقت', async () => {
+  // السؤال المفتوح الفوري: الإجابة تُعتمد للعرض فورًا ولا تحتاج تصحيحًا، والكلام غير اللائق لا يظهر
+  const s = await rpc1(A, `insert into sessions(title, is_quick, auto_approve_open) values ('أسئلة فورية', true, true) returning *`);
+  const snap = { question_id: null, type: 'open_ended', answer_format: 'open', text: 'ما أجمل ما تعلمته اليوم؟', stimulus_kind: 'none', stimulus_text: null, stimulus_source: null, image_url: null,
+    hint: null, explanation: null, bloom: 'understand', difficulty: 'easy', skill: '', unit: '', lesson: '', domain: '', answer_key: { poll: true }, options: [] };
+  const sq = await rpc1(A, 'insert into session_questions(session_id, question_id, snapshot) values ($1, null, $2::jsonb) returning *', [s.id, JSON.stringify(snap)]);
+  await A('select public.push_question($1)', [sq.id]);
+  const p = await join(s.code, 'هند');
+  const r = await submit(p, sq.id, { text: 'الصدق منجاة' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const row = (await A('select approved, needs_review, flagged from responses where sq_id=$1', [sq.id])).rows[0];
+  assert.deepEqual(row, { approved: true, needs_review: false, flagged: false });
+
+  // التحدي لا يقبل الدخول بلا اسم حتى لو طلب المعلم «بدون أسماء»
+  const g = await rpc1(A, `insert into sessions(title, mode, anonymous, game) values ('كأس', 'self', true, '{"end":"time","minutes":5}') returning *`);
+  assert.equal(g.anonymous, false);
+  assert.equal((await join(g.code, '')).error, 'NAME_REQUIRED');
+  assert.equal((await join(g.code, 'سعد')).ok, true);
+  const link = (await A('select code from practice_links')).rows[0];
+  assert.equal((await anon('select public.practice_start_many($1,$2::text[],$3,false) as r', [link.code, ['الكواكب'], ' '], '10.9.3.1')).rows[0].r.error, 'NAME_REQUIRED');
+
+  // المعلم يعدّل الوقت قبل البدء وأثناء اللعب، والطالب لا يستطيع
+  await A('select public.game_add_time($1, 3)', [g.id]);
+  assert.equal((await A('select game->>\'minutes\' m from sessions where id=$1', [g.id])).rows[0].m, '8');
+  await assert.rejects(anon('select public.game_add_time($1, 5)', [g.id]), /permission denied/);
+  await assert.rejects(B('select public.game_add_time($1, 5)', [g.id]), /NOT_FOUND/);
+  const q = await saveQ(A, { type: 'true_false', answer_format: 'single', text: 'الوقت ذهب', lesson: 'وقت' }, [{ text: 'صح', is_correct: true }, { text: 'خطأ', is_correct: false }]);
+  await A('insert into session_questions(session_id, question_id, position) values ($1,$2,1)', [g.id, q]);
+  await A('select public.game_start($1)', [g.id]);
+  const left = async () => Number((await A('select extract(epoch from ends_at - now())::int s from sessions where id=$1', [g.id])).rows[0].s);
+  assert.ok((await left()) > 7 * 60);
+  await A('select public.game_add_time($1, 5)', [g.id]);
+  assert.ok((await left()) > 12 * 60);
+  await A('select public.game_add_time($1, -60)', [g.id]);
+  const l = await left();
+  assert.ok(l >= 5 && l <= 10, String(l));
+  await assert.rejects(A('select public.game_add_time($1, 0)', [g.id]), /INVALID_TIME/);
+
+  // مدة التحدي الذاتي من إعداد المعلم
+  await A('update practice_links set minutes = 7');
+  const pr = (await anon('select public.practice_start_many($1,$2::text[],$3,false) as r', [link.code, ['الكواكب'], 'منى'], '10.9.3.2')).rows[0].r;
+  const mins = (await as('postgres', null, `select round(extract(epoch from ends_at - started_at) / 60)::int m from sessions where id=$1`, [pr.session_id])).rows[0].m;
+  assert.equal(mins, 7);
+});

@@ -1,5 +1,6 @@
 // لوحة المعلم أثناء الحصة: التحكم بالأسئلة + المؤشرات اللحظية + الإجابات المفتوحة + المشاركون
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import WaitingRoom from '@/components/WaitingRoom';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   CheckCircle2, ChevronLeft, Clock, Dice5, Eye, EyeOff, Flag, LibraryBig, MonitorPlay, Plus, RotateCcw, Send, Shuffle, Square, TimerOff,
@@ -129,6 +130,13 @@ export default function LiveSession() {
             : <Button variant="danger" icon={<Flag className="h-5 w-5" />} loading={busy === 'end'} onClick={endSession}>إنهاء الحصة</Button>}
         </div>
       </Card>
+
+      {/* قبل أول سؤال: من انضم حتى الآن */}
+      {!ended && !sqs.some((x) => x.status !== 'draft') && (
+        <Card className="bg-gradient-to-br from-violet-50 to-white">
+          <WaitingRoom sound people={active.map((p) => ({ id: p.id, name: p.display_name, avatar: p.avatar, team: teams.find((t) => t.id === p.team_id)?.name ?? null, color: teams.find((t) => t.id === p.team_id)?.color ?? null }))} />
+        </Card>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
         <div className="space-y-4">

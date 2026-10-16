@@ -1,5 +1,6 @@
 // شاشة العرض للصف (جهاز العرض): خط كبير، بلا أسماء حقيقية افتراضيًا، والنتائج حسب قرار المعلم
 import { useMemo, useState } from 'react';
+import WaitingRoom from '@/components/WaitingRoom';
 import HomeButton from '@/components/HomeButton';
 import { useParams } from 'react-router-dom';
 import { Expand, Users } from 'lucide-react';
@@ -20,7 +21,7 @@ export default function Present() {
   const settings = useSettings();
   const { session, sqs, participants, responses, teams, error, loading, clockOffset } = useLiveSession(id);
   const now = useNow(250, clockOffset);
-  const [cloud, setCloud] = useState(true);
+  const [cloud, setCloud] = useState(false);
   const active = useMemo(() => participants.filter((p) => !p.is_removed), [participants]);
   const sq = sqs.find((s) => s.id === session?.current_sq_id && s.status !== 'draft') ?? null;
   const stats = useMemo(() => (sq ? computeQuestionStats(sq, active, responses, settings) : null), [sq, active, responses, settings]);
@@ -35,7 +36,7 @@ export default function Present() {
   const showResults = !!sq && (!session.hide_results || sq.status === 'closed');
   const fmt = sq?.snapshot.answer_format;
   const textual = fmt === 'open' || fmt === 'short';
-  const approved = sq ? responses.filter((r) => r.sq_id === sq.id && r.approved && !r.flagged) : [];
+  const approved = sq ? responses.filter((r) => r.sq_id === sq.id && r.approved && !r.flagged).sort((a, b) => b.created_at.localeCompare(a.created_at)) : [];
 
   const fullscreen = () => { void document.documentElement.requestFullscreen?.().catch(() => {}); };
 
@@ -61,6 +62,9 @@ export default function Present() {
         <div className="flex min-h-[80vh] flex-col items-center justify-center gap-8 px-6">
           <h1 className="text-5xl font-extrabold text-brand-800">انضم إلى الحصة</h1>
           <JoinInfo code={session.code} count={active.length} large />
+          <div className="w-full max-w-6xl rounded-3xl bg-white/90 p-6 shadow-card">
+            <WaitingRoom large sound people={active.map((p) => ({ id: p.id, name: showNames ? p.display_name : p.alias, avatar: p.avatar }))} />
+          </div>
         </div>
       ) : (
         <main className="w-full space-y-6 px-6 py-6">
@@ -117,10 +121,10 @@ export default function Present() {
                 <h2 className="text-3xl font-extrabold">إجابات الطلاب {approved.length > 0 && `(${approved.length})`}</h2>
                 <button onClick={() => setCloud(!cloud)} className="rounded-xl bg-brand-50 px-4 py-2 text-xl font-bold">{cloud ? 'عرض البطاقات' : 'سحابة الكلمات'}</button>
               </div>
-              {approved.length === 0 ? <p className="text-2xl text-brand-500">تظهر الإجابات هنا بعد أن يعتمدها المعلم.</p>
+              {approved.length === 0 ? <p className="text-2xl text-brand-500">{session.auto_approve_open ? 'تظهر إجابات الطلاب هنا لحظة إرسالها.' : 'تظهر الإجابات هنا بعد أن يعتمدها المعلم.'}</p>
                 : cloud ? <WordCloud texts={approved.map((r) => r.answer.text ?? '')} large />
                   : <div className="grid gap-3 md:grid-cols-3">{approved.map((r) => (
-                    <div key={r.id} className="rounded-2xl bg-ivory-100 p-4 text-2xl">
+                    <div key={r.id} className="animate-bounceIn rounded-2xl bg-ivory-100 p-4 text-2xl" data-testid="present-answer">
                       <div>{r.answer.text}</div>
                       {showNames && <div className="mt-2 text-base text-brand-600">— {participants.find((p) => p.id === r.participant_id)?.display_name}</div>}
                     </div>))}</div>}

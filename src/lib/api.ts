@@ -317,6 +317,8 @@ export const game = {
   // المعلم
   start: (sessionId: string) => run(supabase.rpc('game_start', { p_session: sessionId })),
   end: (sessionId: string) => run(supabase.rpc('game_end', { p_session: sessionId })),
+  // زيادة وقت التحدي أو إنقاصه بالدقائق (قبل البدء يعدّل المدة المخططة)
+  addTime: (sessionId: string, minutes: number) => run(supabase.rpc('game_add_time', { p_session: sessionId, p_minutes: minutes })),
   players: (sessionId: string) =>
     run(supabase.from('game_players').select('participant_id,points,answered,correct,best_streak,shield_until,frozen_until,hearts,out_at,updated_at').eq('session_id', sessionId)) as Promise<GamePlayerRow[]>,
   events: (sessionId: string, limit = 12) =>
@@ -325,18 +327,19 @@ export const game = {
 export type { GameEvent };
 
 // ---------- التحدي الذاتي: الطالب يختار الدرس ويبدأ بنفسه ----------
-export interface PracticeLink { owner_id: string; code: string; enabled: boolean; is_public: boolean }
+export interface PracticeLink { owner_id: string; code: string; enabled: boolean; is_public: boolean; minutes: number }
 export interface PublicPractice { code: string; teacher: string }
 export interface PracticePreview { teacher: string; lessons: { lesson: string; count: number }[]; rooms: { code: string; lesson: string; host: string | null; players: number }[] }
 type JoinResult = { participant_id: string; token: string; session_id: string; code: string; alias: string; display_name: string };
 
-const LINK_COLS = 'owner_id,code,enabled,is_public';
+const LINK_COLS = 'owner_id,code,enabled,is_public,minutes';
 
 export const practice = {
   // المعلم
   myLink: () => run(supabase.from('practice_links').select(LINK_COLS).maybeSingle()) as Promise<PracticeLink | null>,
   createLink: () => run(supabase.from('practice_links').insert({ is_public: true }).select(LINK_COLS).single()) as Promise<PracticeLink>,
   setEnabled: (ownerId: string, enabled: boolean) => run(supabase.from('practice_links').update({ enabled }).eq('owner_id', ownerId).select(LINK_COLS).single()) as Promise<PracticeLink>,
+  setMinutes: (ownerId: string, minutes: number) => run(supabase.from('practice_links').update({ minutes }).eq('owner_id', ownerId).select(LINK_COLS).single()) as Promise<PracticeLink>,
   setPublic: (ownerId: string, isPublic: boolean) => run(supabase.from('practice_links').update({ is_public: isPublic }).eq('owner_id', ownerId).select(LINK_COLS).single()) as Promise<PracticeLink>,
   // الطالب
   publicList: () => run(supabase.rpc('practice_public')) as Promise<PublicPractice[]>,
