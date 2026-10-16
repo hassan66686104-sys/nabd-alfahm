@@ -43,6 +43,8 @@ export default function NewChallenge() {
 
   useEffect(() => { listQuestions({ limit: 300 }).then(setBank).catch((e) => setError(toAppError(e).message)); }, []);
   const lessons = useMemo(() => [...new Set((bank ?? []).filter(playable).map((q) => q.lesson.trim()).filter(Boolean))].sort(), [bank]);
+  // الدروس العامة: كل أسئلتها من قسم «عامة»
+  const generalLessons = useMemo(() => new Set(lessons.filter((l) => (bank ?? []).filter((q) => q.lesson.trim() === l).every((q) => q.is_general))), [lessons, bank]);
 
   // اختيار درس أو أكثر: الضغط يضيف أسئلة الدرس، والضغط مرة أخرى يزيلها
   const toggleLesson = (l: string) => {
@@ -95,16 +97,23 @@ export default function NewChallenge() {
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <div className="mb-1 font-semibold">اختر درسًا أو أكثر</div>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="الدروس" data-testid="challenge-lessons">
-              {lessons.map((l) => {
-                const on = chosen.includes(l);
-                return (
-                  <button key={l} type="button" aria-pressed={on} onClick={() => toggleLesson(l)}
-                    className={cx('rounded-full border-2 px-3 py-1.5 font-bold transition', on ? 'border-transparent bg-gradient-to-r from-brand-500 to-fuchsia-500 text-white shadow' : 'border-brand-100 bg-white text-brand-800 hover:bg-brand-50')}>
-                    {on ? '✓ ' : ''}{l}
-                  </button>
-                );
-              })}
+            <div className="space-y-2" data-testid="challenge-lessons">
+              {([['📚 المنهج', lessons.filter((l) => !generalLessons.has(l))], ['🌍 أسئلة عامة', lessons.filter((l) => generalLessons.has(l))]] as const).map(([label, list]) => list.length > 0 && (
+                <div key={label}>
+                  <div className="mb-1 text-sm font-bold text-brand-500">{label}</div>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label={label}>
+                    {list.map((l) => {
+                      const on = chosen.includes(l);
+                      return (
+                        <button key={l} type="button" aria-pressed={on} onClick={() => toggleLesson(l)}
+                          className={cx('rounded-full border-2 px-3 py-1.5 font-bold transition', on ? 'border-transparent bg-gradient-to-r from-brand-500 to-fuchsia-500 text-white shadow' : 'border-brand-100 bg-white text-brand-800 hover:bg-brand-50')}>
+                          {on ? '✓ ' : ''}{l}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
           <Field label="اسم التحدي"><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="مثال: تحدي الكأس — الصدق" /></Field>

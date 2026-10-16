@@ -41,6 +41,8 @@ export const questionSchema = z
     template_key: z.string().nullable().optional(),
     tags: z.array(z.string().trim().min(1).max(40)).max(20),
     is_favorite: z.boolean(),
+    // قسم السؤال: المنهج (false) أو عامة (true)، والدرس عندها هو القسم مثل «ألغاز» أو «رياضة»
+    is_general: z.boolean().optional(),
     options: z.array(optionSchema),
   })
   .superRefine((q, ctx) => {

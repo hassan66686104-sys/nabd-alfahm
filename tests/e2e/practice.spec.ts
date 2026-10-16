@@ -118,6 +118,22 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   await expect(host.getByTestId('game-winner')).toBeVisible({ timeout: 10000 });
   await shot(friend, '43-practice-friends-end');
 
+  // لم يحضر أحد: صاحبة الغرفة تنافس الكمبيوتر
+  const lone = await phone(browser);
+  await lone.goto(`/practice/${code}`);
+  await lone.getByPlaceholder('اكتب اسمك').fill('هند');
+  await expect(lone.getByRole('radio', { name: 'ضد الكمبيوتر' })).toBeVisible();
+  await lone.getByRole('radio', { name: 'مع زملائي' }).click();
+  await lone.getByTestId('lesson').filter({ hasText: 'الأخلاق' }).click();
+  await expect(lone.getByTestId('room-code')).toBeVisible();
+  await lone.getByTestId('vs-computer').click();
+  await expect(lone.getByText('السؤال 1 من 4')).toBeVisible({ timeout: 10000 });
+  await expect(lone.getByText('الكمبيوتر').first()).toBeVisible();
+  await shot(lone, '48-vs-computer');
+  await answerAll(lone);
+  // التعادل لصالح الطالب، وكل إجاباتها صحيحة فهي الفائزة
+  await expect(lone.getByTestId('game-winner')).toHaveText('هند', { timeout: 10000 });
+
   // النتائج تصل إلى المعلم
   await t.goto('/t');
   await expect(t.getByText('تحدي ذاتي: الأخلاق').first()).toBeVisible();
@@ -125,6 +141,12 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   // منافسة بأكثر من درس: الطالب يحدد الألغاز والمعلومات العامة ثم يبدأ
   const multi = await phone(browser);
   await multi.goto(`/practice/${code}`);
+  // الأسئلة مقسمة: دروس المنهج، والأسئلة العامة (ألغاز، رياضة، تاريخ...)
+  await expect(multi.getByTestId('lesson').filter({ hasText: 'الأخلاق' })).toBeVisible();
+  await multi.getByTestId('tab-general').click();
+  for (const c of ['ألغاز', 'رياضة', 'تاريخ', 'دين', 'لغة عربية']) await expect(multi.getByTestId('lesson').filter({ hasText: c })).toBeVisible();
+  await expect(multi.getByTestId('lesson').filter({ hasText: 'الأخلاق' })).toHaveCount(0);
+  await shot(multi, '47-sections');
   // الاسم إجباري: لا يبدأ التحدي قبل كتابته
   await multi.getByTestId('lesson').filter({ hasText: 'ألغاز' }).click();
   await expect(multi.getByText('اكتب اسمك أولًا (حرفان على الأقل)')).toBeVisible();

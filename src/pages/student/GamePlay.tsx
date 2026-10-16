@@ -194,6 +194,16 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
     finally { setBeginning(false); }
   };
 
+  const vsComputer = async () => {
+    setBeginning(true);
+    try {
+      const r = await practice.vsComputer(p.participant_id, p.token);
+      if (!r.ok) setTransient(messageFor(r.error));
+      await refresh();
+    } catch (e) { setTransient(toAppError(e).message); }
+    finally { setBeginning(false); }
+  };
+
   const doRoll = async () => {
     setRolling(true); sfx.roll();
     try {
@@ -300,7 +310,7 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
         <Confetti burst={burst} />
         <Card className="animate-bounceIn space-y-4 bg-gradient-to-b from-yellow-50 via-white to-pink-50 py-8">
           <Podium rows={gs.board} winner={gs.session.winner} prize={g.prize} />
-          <p className="text-center text-lg font-bold">{won ? 'مبارك! أنت بطل التحدي 🎉' : `انتهى التحدي. مركزك ${me.rank ?? '—'} بـ ${me.points} نقطة.`}</p>
+          <p className="text-center text-lg font-bold">{won ? 'مبارك! أنت بطل التحدي 🎉' : gs.session.winner?.id === 'bot' ? `فاز الكمبيوتر هذه المرة 🤖 لديك ${me.points} نقطة. حاول مجددًا!` : `انتهى التحدي. مركزك ${me.rank ?? '—'} بـ ${me.points} نقطة.`}</p>
           <p className="text-center text-brand-600">أجبت {me.correct} إجابة صحيحة من {me.answered}.</p>
           <div className="flex flex-wrap justify-center gap-2">
             {g.practice && <Button variant="gold" onClick={() => { participantStore.clear(); nav(lastPracticeCode() ? `/practice/${lastPracticeCode()}` : '/practice'); }}>تحدٍّ جديد</Button>}
@@ -328,6 +338,9 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
                 <div dir="ltr" className="font-mono text-4xl font-extrabold tracking-[.2em]" data-testid="room-code">{gs.session.code}</div>
                 <p className="text-sm text-brand-600">عندما يدخلون اضغط «ابدأ». يمكنك البدء وحدك أيضًا.</p>
                 <Button size="xl" variant="gold" className="w-full" loading={beginning} onClick={begin}>ابدأ التحدي الآن ({gs.board.length} {gs.board.length === 1 ? 'لاعب' : 'لاعبين'})</Button>
+                {gs.board.length === 1 && (
+                  <Button size="lg" variant="soft" className="w-full" disabled={beginning} onClick={vsComputer} data-testid="vs-computer">🤖 لم يحضر أحد؟ نافس الكمبيوتر</Button>
+                )}
               </div>
             ) : <p className="text-brand-600">بانتظار {gs.board.find((r) => r.id === g.host)?.name ?? 'صاحب التحدي'} ليبدأ التحدي. استعد!</p>
           ) : <p className="text-brand-600">سيبدأ التحدي عندما يضغط المعلم «ابدأ».</p>}
@@ -548,12 +561,12 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
         ) : (
           <div className="grid max-h-[60vh] gap-2 overflow-y-auto">
             <p className="text-brand-600">اختر زميلًا{me.power === 'take' ? ' لتأخذ منه حتى 10 نقاط' : ' لتجميده 15 ثانية'}. صاحب الدرع 🛡️ يصدّ المحاولة.</p>
-            {gs.board.filter((r) => !r.me).map((r) => (
+            {gs.board.filter((r) => !r.me && !r.bot).map((r) => (
               <Button key={r.id} variant="outline" disabled={acting} className="justify-between" onClick={() => usePower(r.id, null)}>
                 <span>{r.name}{r.shield && ' 🛡️'}{r.frozen && ' ❄️'}</span><span className="font-extrabold">{r.points}</span>
               </Button>
             ))}
-            {gs.board.filter((r) => !r.me).length === 0 && <p>لا يوجد زملاء بعد.</p>}
+            {gs.board.filter((r) => !r.me && !r.bot).length === 0 && <p>لا يوجد زملاء بعد.</p>}
           </div>
         ))}
       </Modal>

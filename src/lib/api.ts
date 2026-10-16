@@ -109,12 +109,13 @@ export interface QuestionFilters {
   bloom?: string;
   domain?: string;
   favorites?: boolean;
+  section?: '' | 'curriculum' | 'general';
   limit?: number;
 }
 
 const escLike = (s: string) => s.replace(/[%_,()*\\]/g, ' ').trim();
 
-// يضيف إلى بنك المعلم ألغازًا ومعلومات عامة وثقافة إسلامية جاهزة (اختيار من متعدد وصح وخطأ)
+// يضيف إلى بنك المعلم أسئلة عامة جاهزة (ألغاز، رياضة، تاريخ، دين، لغة عربية، معلومات عامة) (اختيار من متعدد وصح وخطأ)
 export const addStarterPack = () => run(supabase.rpc('add_starter_pack')) as Promise<{ ok: boolean; added: number; error?: string }>;
 
 export async function listQuestions(f: QuestionFilters = {}): Promise<Question[]> {
@@ -127,6 +128,7 @@ export async function listQuestions(f: QuestionFilters = {}): Promise<Question[]
   if (f.bloom) q = q.eq('bloom', f.bloom);
   if (f.domain) q = q.eq('domain', f.domain);
   if (f.favorites) q = q.eq('is_favorite', true);
+  if (f.section) q = q.eq('is_general', f.section === 'general');
   if (f.search?.trim()) {
     const s = escLike(f.search);
     if (s) q = q.or(`text.ilike.*${s}*,lesson.ilike.*${s}*,unit.ilike.*${s}*,skill.ilike.*${s}*,stimulus_text.ilike.*${s}*`);
@@ -144,9 +146,11 @@ export async function getQuestion(id: string): Promise<Question> {
 }
 
 export async function saveQuestion(input: QuestionInput): Promise<string> {
-  const { options, ...q } = input;
+  const { options, is_general, ...q } = input;
   const payload = { ...q, subject_id: q.subject_id || null, image_url: q.image_url || null };
-  return run(supabase.rpc('save_question', { p_question: payload, p_options: options.map((o) => ({ ...o, match_text: o.match_text || null })) })) as Promise<string>;
+  const id = (await run(supabase.rpc('save_question', { p_question: payload, p_options: options.map((o) => ({ ...o, match_text: o.match_text || null })) }))) as string;
+  if (is_general !== undefined) await run(supabase.from('questions').update({ is_general }).eq('id', id));
+  return id;
 }
 
 export const duplicateQuestion = (id: string) => run(supabase.rpc('duplicate_question', { p_question: id })) as Promise<string>;
@@ -329,7 +333,7 @@ export type { GameEvent };
 // ---------- التحدي الذاتي: الطالب يختار الدرس ويبدأ بنفسه ----------
 export interface PracticeLink { owner_id: string; code: string; enabled: boolean; is_public: boolean; minutes: number }
 export interface PublicPractice { code: string; teacher: string }
-export interface PracticePreview { teacher: string; lessons: { lesson: string; count: number }[]; rooms: { code: string; lesson: string; host: string | null; players: number }[] }
+export interface PracticePreview { teacher: string; lessons: { lesson: string; count: number; general?: boolean }[]; rooms: { code: string; lesson: string; host: string | null; players: number }[] }
 type JoinResult = { participant_id: string; token: string; session_id: string; code: string; alias: string; display_name: string };
 
 const LINK_COLS = 'owner_id,code,enabled,is_public,minutes';
@@ -350,4 +354,6 @@ export const practice = {
   startMany: (code: string, lessons: string[], name: string, withFriends: boolean) =>
     run(supabase.rpc('practice_start_many', { p_code: code, p_lessons: lessons, p_name: name, p_with_friends: withFriends })) as Promise<StudentResult<JoinResult>>,
   begin: (participantId: string, token: string) => run(supabase.rpc('practice_begin', { p_participant: participantId, p_token: token })) as Promise<StudentResult<object>>,
+  // لم يجد الطالب زميلًا: ينافس الكمبيوتر ويبدأ فورًا
+  vsComputer: (participantId: string, token: string) => run(supabase.rpc('practice_vs_computer', { p_participant: participantId, p_token: token })) as Promise<StudentResult<object>>,
 };

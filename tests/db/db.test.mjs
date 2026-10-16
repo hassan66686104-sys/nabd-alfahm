@@ -750,7 +750,47 @@ test('منافسة بعدة دروس، واستبعاد الأسئلة الكت�
   const pos = (await A(`select count(distinct o.position)::int n from questions q join question_options o on o.question_id = q.id and o.is_correct where q.type = 'mcq' and 'جاهز' = any(q.tags)`)).rows[0].n;
   assert.equal(pos, 4, 'الإجابة الصحيحة ليست دائمًا في الموضع نفسه');
   const lessons = (await anon('select public.practice_lookup($1) as r', [link.code], '10.9.2.1')).rows[0].r.lessons.map((l) => l.lesson);
-  for (const l of ['ألغاز', 'معلومات عامة', 'ثقافة إسلامية']) assert.ok(lessons.includes(l), l);
+  for (const l of ['ألغاز', 'معلومات عامة', 'دين', 'رياضة', 'تاريخ', 'لغة عربية']) assert.ok(lessons.includes(l), l);
+  // الأقسام: الأسئلة الجاهزة «عامة»، ودروس المعلم «المنهج»
+  const look2 = (await anon('select public.practice_lookup($1) as r', [link.code], '10.9.2.1')).rows[0].r.lessons;
+  assert.equal(look2.find((l) => l.lesson === 'رياضة').general, true);
+  assert.equal(look2.find((l) => l.lesson === 'الكواكب').general, false);
+  assert.equal((await A(`select count(*)::int n from questions where 'جاهز' = any(tags) and not is_general`)).rows[0].n, 0);
+});
+
+test('منافسة الكمبيوتر حين لا يجد الطالب زميلًا', async () => {
+  const link = (await A('select code from practice_links')).rows[0];
+  const r = (await anon('select public.practice_start_many($1,$2::text[],$3,true) as r', [link.code, ['الكواكب'], 'سلمى'], '10.9.4.1')).rows[0].r;
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const call = async (sql, extra = []) => (await anon(`select ${sql} as r`, [r.participant_id, r.token, ...extra])).rows[0].r;
+  // لا يستطيع غير صاحب الغرفة استدعاء الكمبيوتر
+  const other = (await anon('select public.join_session($1,$2,null) as r', [r.code, 'منى'], '10.9.4.2')).rows[0].r;
+  assert.equal((await anon('select public.practice_vs_computer($1,$2) as r', [other.participant_id, other.token])).rows[0].r.error, 'FORBIDDEN');
+  assert.equal((await call('public.practice_vs_computer($1,$2)')).error, 'NOT_ALONE');
+  await as('postgres', null, 'update participants set is_removed = true where id=$1', [other.participant_id]);
+  assert.equal((await call('public.practice_vs_computer($1,$2)')).ok, true);
+  let g = await call('public.game_state($1,$2)');
+  assert.equal(g.session.status, 'live');
+  const bot = g.board.find((b) => b.bot);
+  assert.equal(bot.name, 'الكمبيوتر');
+  assert.equal(bot.points, 0);
+  // الكمبيوتر يجيب سؤالًا مقابل كل سؤال يجيبه الطالب، والطالب لا يرى إجابته الصحيحة
+  assert.equal(JSON.stringify(g).includes('is_correct'), false);
+  // الكمبيوتر يجيب دائمًا صحيحًا هنا حتى تكون النتيجة معروفة
+  await as('postgres', null, `update sessions set game = jsonb_set(game, '{bot,skill}', '1') where id=$1`, [r.session_id]);
+  while (g.question) {
+    const snap = (await as('postgres', null, 'select snapshot from session_questions where id=$1', [g.question.sq_id])).rows[0].snapshot;
+    const wrong = snap.options.find((o) => !o.is_correct).id;
+    await call('public.game_submit($1,$2,$3,$4::jsonb)', [g.question.sq_id, JSON.stringify({ option_id: wrong })]);
+    g = await call('public.game_state($1,$2)');
+  }
+  assert.equal(g.session.status, 'ended');
+  assert.ok(g.board.find((b) => b.bot).answered >= 1);
+  assert.equal(g.session.winner.id, 'bot');
+  assert.equal(g.board[0].bot, true);
+  // الكمبيوتر لا يظهر في المشاركين ولا في التقرير
+  assert.equal((await as('postgres', null, 'select count(*)::int n from participants where session_id=$1 and not is_removed', [r.session_id])).rows[0].n, 1);
+  assert.equal((await anon('select public._game_bot_step($1) as r', [r.session_id]).catch((e) => e.message)).includes('permission denied'), true);
 });
 
 test('سؤال مفتوح فوري، اسم إجباري في التحديات، وتحكم المعلم في الوقت', async () => {

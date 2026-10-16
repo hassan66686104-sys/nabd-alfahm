@@ -107,3 +107,9 @@ export const TEAM_COLORS = ['#6440e3', '#f59f00', '#1d4ed8', '#b91c1c', '#7c3aed
 export const OPTION_LETTERS = ['أ', 'ب', 'ج', 'د', 'هـ', 'و', 'ز', 'ح', 'ط', 'ي'];
 
 export const DEFAULT_SETTINGS = { mastery: 80, reinforce: 50, default_time: 30, hide_names: false, anonymous: false };
+
+// أقسام الأسئلة العامة (غير المنهج)، ويمكن للمعلم كتابة قسم آخر
+export const GENERAL_CATEGORIES = ['ألغاز', 'رياضة', 'تاريخ', 'دين', 'لغة عربية', 'علوم', 'جغرافيا', 'معلومات عامة'] as const;
+export const CATEGORY_EMOJI: Record<string, string> = {
+  'ألغاز': '🧩', 'رياضة': '⚽', 'تاريخ': '🏛️', 'دين': '🕌', 'لغة عربية': '📖', 'علوم': '🔬', 'جغرافيا': '🗺️', 'معلومات عامة': '🌍',
+};

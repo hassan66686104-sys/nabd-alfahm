@@ -5,7 +5,7 @@ import { Badge, Button, Card, EmptyState, ErrorBox, Input, PageHeader, Select, S
 import { useFeedback } from '@/components/feedback';
 import { addStarterPack, deleteQuestion, duplicateQuestion, listQuestions, setFavorite, subjects as subjectsApi, type QuestionFilters } from '@/lib/api';
 import { toAppError } from '@/lib/errors';
-import { BLOOM, DIFFICULTY, ISLAMIC_DOMAINS, QUESTION_TYPES, bloomLabel, difficultyLabel, typeLabel } from '@/lib/constants';
+import { BLOOM, CATEGORY_EMOJI, GENERAL_CATEGORIES, DIFFICULTY, ISLAMIC_DOMAINS, QUESTION_TYPES, bloomLabel, difficultyLabel, typeLabel } from '@/lib/constants';
 import type { Question, Subject } from '@/lib/types';
 
 export default function QuestionBank() {
@@ -22,7 +22,7 @@ export default function QuestionBank() {
   const filters: QuestionFilters = useMemo(() => ({
     search: params.get('q') ?? '', subject_id: params.get('subject') ?? '', grade: params.get('grade') ?? '', lesson: params.get('lesson') ?? '',
     type: params.get('type') ?? '', difficulty: params.get('difficulty') ?? '', bloom: params.get('bloom') ?? '', domain: params.get('domain') ?? '',
-    favorites: params.get('fav') === '1',
+    favorites: params.get('fav') === '1', section: (params.get('section') ?? '') as QuestionFilters['section'],
   }), [params]);
 
   const setFilter = (k: string, v: string) => {
@@ -72,6 +72,23 @@ export default function QuestionBank() {
       />
 
       <Card className="space-y-3 p-3">
+        <div className="grid max-w-md grid-cols-3 gap-1 rounded-2xl bg-brand-50 p-1" role="tablist" aria-label="الأقسام">
+          {([['', 'الكل'], ['curriculum', '📚 المنهج'], ['general', '🌍 عامة']] as const).map(([v, label]) => (
+            <button key={v || 'all'} type="button" role="tab" aria-selected={(filters.section ?? '') === v} data-testid={`bank-section-${v || 'all'}`}
+              onClick={() => { const p = new URLSearchParams(params); if (v) p.set('section', v); else p.delete('section'); p.delete('lesson'); setParams(p, { replace: true }); }}
+              className={cx('rounded-xl py-2 font-extrabold transition', (filters.section ?? '') === v ? 'bg-white text-brand-800 shadow' : 'text-brand-600 hover:bg-white/60')}>{label}</button>
+          ))}
+        </div>
+        {filters.section === 'general' && (
+          <div className="flex flex-wrap gap-2" aria-label="أنواع الأسئلة العامة">
+            {GENERAL_CATEGORIES.map((c) => (
+              <button key={c} type="button" aria-pressed={filters.lesson === c} onClick={() => setFilter('lesson', filters.lesson === c ? '' : c)}
+                className={cx('rounded-full border-2 px-3 py-1 text-sm font-bold transition', filters.lesson === c ? 'border-transparent bg-gradient-to-r from-brand-500 to-fuchsia-500 text-white shadow' : 'border-brand-100 bg-white text-brand-800 hover:bg-brand-50')}>
+                {CATEGORY_EMOJI[c]} {c}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex gap-2">
           <Input value={filters.search} onChange={(e) => setFilter('q', e.target.value)} placeholder="ابحث بالكلمات المفتاحية…" aria-label="بحث" />
           <Button variant={showFilters ? 'primary' : 'outline'} onClick={() => setShowFilters((v) => !v)} icon={<Filter className="h-5 w-5" />}><span className="hidden sm:inline">تصفية</span></Button>
@@ -126,7 +143,7 @@ export default function QuestionBank() {
                 <Badge tone={q.difficulty === 'hard' ? 'red' : q.difficulty === 'easy' ? 'green' : 'yellow'}>{difficultyLabel(q.difficulty)}</Badge>
                 {subjectName(q.subject_id) && <Badge tone="gray">{subjectName(q.subject_id)}</Badge>}
                 {q.grade && <Badge tone="gray">{q.grade}</Badge>}
-                {q.lesson && <Badge tone="gray">{q.lesson}</Badge>}
+                {q.lesson && <Badge tone={q.is_general ? 'gold' : 'gray'}>{q.is_general ? `${CATEGORY_EMOJI[q.lesson] ?? '🌍'} ` : ''}{q.lesson}</Badge>}
                 {q.domain && <Badge tone="blue">{q.domain}</Badge>}
               </div>
               <div className="flex flex-wrap gap-2 border-t border-brand-50 pt-2">

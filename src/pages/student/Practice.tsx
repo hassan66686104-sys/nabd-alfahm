@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import HomeButton from '@/components/HomeButton';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Loader2, RefreshCw, Trophy, User, Users } from 'lucide-react';
+import { Bot, Loader2, RefreshCw, Trophy, User, Users } from 'lucide-react';
 import { Brand, Credit } from '@/components/Logo';
 import { Button, Card, ErrorBox, Field, Input, Spinner, cx } from '@/components/ui';
 import { OfflineBanner } from '@/components/feedback';
@@ -13,6 +13,7 @@ import { game, practice, student, type PracticePreview, type PublicPractice } fr
 import { messageFor, toAppError } from '@/lib/errors';
 import { participantStore } from '@/hooks/useStudent';
 import { lastPracticeCode, rememberPracticeCode } from '@/lib/game';
+import { CATEGORY_EMOJI } from '@/lib/constants';
 
 const NAME_KEY = 'nabd.practice-name';
 const readName = () => { try { return localStorage.getItem(NAME_KEY) ?? ''; } catch { return ''; } };
@@ -29,7 +30,10 @@ export default function Practice() {
   const [name, setName] = useState(readName);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [withFriends, setWithFriends] = useState(false);
+  // وحدي، أو ضد الكمبيوتر، أو مع زملائي
+  const [mode, setMode] = useState<'solo' | 'computer' | 'friends'>('solo');
+  // الأقسام: دروس المنهج أو الأسئلة العامة
+  const [tab, setTab] = useState<'curriculum' | 'general'>('curriculum');
   const [avatar, setAvatar] = useState<string>(savedAvatar() ?? 'lion');
   // المعلمون الذين جعلوا تحدياتهم متاحة بدون رمز
   const [teachers, setTeachers] = useState<PublicPractice[] | null>(null);
@@ -97,8 +101,13 @@ export default function Practice() {
     setLesson(key);
     setBusy(key); setError(null);
     try {
-      const r = await practice.startMany(code, pick, playerName(), withFriends);
-      if (!r.ok) setError(messageFor(r.error)); else await enter(r);
+      const r = await practice.startMany(code, pick, playerName(), mode !== 'solo');
+      if (!r.ok) return setError(messageFor(r.error));
+      if (mode === 'computer') {
+        const c = await practice.vsComputer(r.participant_id, r.token);
+        if (!c.ok) return setError(messageFor(c.error));
+      }
+      await enter(r);
     } catch (e) { setError(toAppError(e).message); }
     finally { setBusy(null); }
   };
@@ -112,6 +121,11 @@ export default function Practice() {
     } catch (e) { setError(toAppError(e).message); }
     finally { setBusy(null); }
   };
+
+  const curriculum = data?.lessons.filter((l) => !l.general) ?? [];
+  const general = data?.lessons.filter((l) => l.general) ?? [];
+  const shownTab = curriculum.length === 0 ? 'general' : general.length === 0 ? 'curriculum' : tab;
+  const shown = shownTab === 'general' ? general : curriculum;
 
   const codeForm = (
     <form className="space-y-4" onSubmit={(e: FormEvent) => { e.preventDefault(); void load(code); }}>
@@ -169,10 +183,10 @@ export default function Practice() {
               </div>
               <Field label="اسمك" hint="مطلوب ليظهر في الترتيب وعند المعلم"><Input ref={nameRef} value={name} onChange={(e) => { setName(e.target.value); setError(null); }} maxLength={40} autoComplete="name" className="text-lg" placeholder="اكتب اسمك" required aria-invalid={!!error && !nameOk} /></Field>
               <AvatarPicker value={avatar} onChange={setAvatar} />
-              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="طريقة اللعب">
-                {([[false, 'وحدي', User], [true, 'مع زملائي', Users]] as const).map(([v, label, Icon]) => (
-                  <button key={label} type="button" role="radio" aria-checked={withFriends === v} onClick={() => setWithFriends(v)}
-                    className={cx('flex items-center justify-center gap-2 rounded-xl border-2 p-2.5 font-bold transition', withFriends === v ? 'border-transparent bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-lg' : 'border-purple-200 text-purple-800 hover:bg-purple-50')}>
+              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="طريقة اللعب">
+                {([['solo', 'وحدي', User], ['computer', 'ضد الكمبيوتر', Bot], ['friends', 'مع زملائي', Users]] as const).map(([v, label, Icon]) => (
+                  <button key={label} type="button" role="radio" aria-checked={mode === v} onClick={() => setMode(v)}
+                    className={cx('flex flex-col items-center justify-center gap-1 rounded-xl border-2 p-2.5 text-sm font-bold transition sm:flex-row sm:gap-2 sm:text-base', mode === v ? 'border-transparent bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-lg' : 'border-purple-200 text-purple-800 hover:bg-purple-50')}>
                     <Icon className="h-5 w-5" />{label}
                   </button>
                 ))}
@@ -187,14 +201,22 @@ export default function Practice() {
                     </button>
                   )}
                 </div>
+                {curriculum.length > 0 && general.length > 0 && (
+                  <div className="mb-3 grid grid-cols-2 gap-1 rounded-2xl bg-brand-50 p-1" role="tablist" aria-label="الأقسام">
+                    {([['curriculum', '📚 المنهج', curriculum.length], ['general', '🌍 أسئلة عامة', general.length]] as const).map(([v, label]) => (
+                      <button key={v} type="button" role="tab" aria-selected={shownTab === v} onClick={() => setTab(v)} data-testid={`tab-${v}`}
+                        className={cx('rounded-xl py-2 font-extrabold transition', shownTab === v ? 'bg-white text-brand-800 shadow' : 'text-brand-600 hover:bg-white/60')}>{label}</button>
+                    ))}
+                  </div>
+                )}
                 {data.lessons.length === 0 ? <p className="rounded-xl bg-ivory-100 p-3 text-brand-700">لا توجد دروس جاهزة بعد. اطلب من معلمك إضافة أسئلة للدروس.</p> : (
                   <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" aria-label="الدروس">
-                    {data.lessons.map((l, i) => (
+                    {shown.map((l, i) => (
                       <button key={l.lesson} type="button" disabled={!!busy} onClick={() => tapLesson(l.lesson)} data-testid="lesson"
                         aria-pressed={multi ? picked.includes(l.lesson) : undefined}
                         style={{ animationDelay: `${i * 60}ms` }}
                         className={cx('group flex animate-bounceIn items-center [animation-fill-mode:both] justify-between gap-2 rounded-2xl bg-gradient-to-br p-3 text-start font-extrabold text-white shadow-lg ring-2 ring-white/40 transition hover:-translate-y-1 hover:scale-[1.03] hover:shadow-2xl disabled:opacity-60', VIVID[i % VIVID.length], lesson === l.lesson && busy && 'ring-4 ring-yellow-300', multi && picked.includes(l.lesson) && 'ring-4 ring-yellow-300', multi && !picked.includes(l.lesson) && 'opacity-80')}>
-                        <span className="flex items-center gap-2 drop-shadow"><span className="text-2xl transition group-hover:animate-wiggle">{multi ? (picked.includes(l.lesson) ? '✅' : '⬜') : LESSON_EMOJI[i % LESSON_EMOJI.length]}</span>{l.lesson}</span>
+                        <span className="flex items-center gap-2 drop-shadow"><span className="text-2xl transition group-hover:animate-wiggle">{multi ? (picked.includes(l.lesson) ? '✅' : '⬜') : (l.general && CATEGORY_EMOJI[l.lesson]) || LESSON_EMOJI[i % LESSON_EMOJI.length]}</span>{l.lesson}</span>
                         {busy === l.lesson ? <Loader2 className="h-5 w-5 shrink-0 animate-spin" aria-label="جارٍ البدء" /> : <span className="shrink-0 rounded-full bg-white/25 px-2 py-0.5 text-xs font-bold">{l.count} سؤال</span>}
                       </button>
                     ))}
@@ -208,7 +230,6 @@ export default function Practice() {
                 )}
               </div>
               {error && <ErrorBox error={error} />}
-              {withFriends && <p className="text-sm text-brand-600">«مع زملائي» ينشئ غرفة برمز؛ تظهر لزملائك المتصلين هنا، أو تعطيهم الرمز، وتبدأ أنت عندما يدخلون.</p>}
             </Card>
 
             <Card className="animate-bounceIn space-y-2 p-5 shadow-2xl">
@@ -216,7 +237,7 @@ export default function Practice() {
                 <h2 className="text-lg font-extrabold">⚔️ زملاء ينتظرون منافسًا</h2>
                 <button type="button" onClick={() => load(code, true)} className="flex items-center gap-1 text-sm font-semibold text-brand-700 underline"><RefreshCw className="h-4 w-4" />تحديث</button>
               </div>
-              {data.rooms.length === 0 ? <p className="text-brand-600">لا يوجد أحد الآن. اختر «مع زملائي» ثم الدرس، وسيظهر تحديك لزملائك.</p> : data.rooms.map((r) => (
+              {data.rooms.length === 0 ? <p className="text-brand-600">لا يوجد أحد الآن. نافس الكمبيوتر، أو اختر «مع زملائي» ليظهر تحديك لزملائك.</p> : data.rooms.map((r) => (
                 <div key={r.code} className="flex items-center justify-between gap-2 rounded-xl border border-brand-100 p-3">
                   <div>
                     <div className="font-bold">{r.host ?? 'زميل'} · {r.lesson}</div>

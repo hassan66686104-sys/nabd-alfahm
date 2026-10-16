@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, BookMarked, ImagePlus, Plus, Trash2, X } from 'lucide-react';
 import { Badge, Button, Card, ErrorBox, Field, Input, OptionLetter, Select, Textarea, Toggle, cx } from './ui';
 import { useFeedback } from './feedback';
-import { BLOOM, DIFFICULTY, FORMAT_LABELS, ISLAMIC_DOMAINS, ISLAMIC_TEMPLATES, OPTION_LETTERS, QUESTION_TYPES, STIMULUS_KINDS } from '@/lib/constants';
+import { BLOOM, CATEGORY_EMOJI, GENERAL_CATEGORIES, DIFFICULTY, FORMAT_LABELS, ISLAMIC_DOMAINS, ISLAMIC_TEMPLATES, OPTION_LETTERS, QUESTION_TYPES, STIMULUS_KINDS } from '@/lib/constants';
 import { questionSchema, firstError, type QuestionInput } from '@/lib/schemas';
 import { saveQuestion, subjects as subjectsApi, uploadQuestionImage } from '@/lib/api';
 import { toAppError } from '@/lib/errors';
@@ -18,7 +18,7 @@ export function blankForm(defaultTime: number | null): FormState {
     type: 'mcq', answer_format: 'single', text: '', stimulus_kind: 'none', stimulus_text: '', stimulus_source: '', image_url: '',
     subject_id: '', grade: '', unit: '', lesson: '', domain: '', difficulty: 'medium', bloom: 'understand', skill: '',
     points: '1', time_limit_seconds: defaultTime ? String(defaultTime) : '', hint: '', explanation: '', answer_key: {}, template_key: null,
-    tags: [], is_favorite: false,
+    tags: [], is_favorite: false, is_general: false,
     options: [{ text: '', is_correct: true, match_text: '' }, { text: '', is_correct: false, match_text: '' }, { text: '', is_correct: false, match_text: '' }, { text: '', is_correct: false, match_text: '' }],
     acceptedText: '', blanksText: [],
   };
@@ -30,7 +30,7 @@ export function formFromQuestion(q: Question): FormState {
     stimulus_source: q.stimulus_source ?? '', image_url: q.image_url ?? '', subject_id: q.subject_id ?? '', grade: q.grade, unit: q.unit,
     lesson: q.lesson, domain: q.domain, difficulty: q.difficulty, bloom: q.bloom, skill: q.skill, points: String(q.points),
     time_limit_seconds: q.time_limit_seconds ? String(q.time_limit_seconds) : '', hint: q.hint ?? '', explanation: q.explanation ?? '',
-    answer_key: q.answer_key ?? {}, template_key: q.template_key, tags: q.tags ?? [], is_favorite: q.is_favorite,
+    answer_key: q.answer_key ?? {}, template_key: q.template_key, tags: q.tags ?? [], is_favorite: q.is_favorite, is_general: q.is_general ?? false,
     options: (q.question_options ?? []).map((o) => ({ text: o.text, is_correct: o.is_correct, match_text: o.match_text ?? '' })),
     acceptedText: (q.answer_key?.accepted ?? []).join('\n'),
     blanksText: (q.answer_key?.blanks ?? []).map((b) => b.join(' | ')),
@@ -294,7 +294,27 @@ export default function QuestionForm({ initial, onSaved, onCancel, compact }: Pr
 
       <Card className="space-y-3">
         <h3 className="font-bold">التصنيف والإعدادات</h3>
+        <div className="grid max-w-sm grid-cols-2 gap-1 rounded-2xl bg-brand-50 p-1" role="radiogroup" aria-label="القسم">
+          {([[false, '📚 المنهج'], [true, '🌍 أسئلة عامة']] as const).map(([v, label]) => (
+            <button key={label} type="button" role="radio" aria-checked={!!f.is_general === v} onClick={() => set('is_general', v)}
+              className={cx('rounded-xl py-2 font-extrabold transition', !!f.is_general === v ? 'bg-white text-brand-800 shadow' : 'text-brand-600 hover:bg-white/60')}>{label}</button>
+          ))}
+        </div>
+        {f.is_general && (
+          <Field label="نوع الأسئلة العامة">
+            <div className="flex flex-wrap gap-2">
+              {GENERAL_CATEGORIES.map((c) => (
+                <button key={c} type="button" aria-pressed={f.lesson === c} onClick={() => set('lesson', c)}
+                  className={cx('rounded-full border-2 px-3 py-1.5 font-bold transition', f.lesson === c ? 'border-transparent bg-gradient-to-r from-brand-500 to-fuchsia-500 text-white shadow' : 'border-brand-100 bg-white text-brand-800 hover:bg-brand-50')}>
+                  {CATEGORY_EMOJI[c]} {c}
+                </button>
+              ))}
+            </div>
+            <Input className="mt-2" value={f.lesson} onChange={(e) => set('lesson', e.target.value)} placeholder="أو اكتب نوعًا آخر" aria-label="نوع الأسئلة العامة" />
+          </Field>
+        )}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {!f.is_general && <>
           <Field label="المادة">
             <Select value={newSubject ? '__new' : f.subject_id ?? ''} onChange={(e) => { if (e.target.value === '__new') setNewSubject(' '); else { setNewSubject(''); set('subject_id', e.target.value); } }}>
               <option value="">— بدون —</option>
@@ -306,6 +326,7 @@ export default function QuestionForm({ initial, onSaved, onCancel, compact }: Pr
           <Field label="الصف"><Input value={f.grade} onChange={(e) => set('grade', e.target.value)} placeholder="مثال: الخامس" /></Field>
           <Field label="الوحدة"><Input value={f.unit} onChange={(e) => set('unit', e.target.value)} /></Field>
           <Field label="الدرس"><Input value={f.lesson} onChange={(e) => set('lesson', e.target.value)} /></Field>
+          </>}
           <Field label="المجال">
             <Input list="domains" value={f.domain} onChange={(e) => set('domain', e.target.value)} placeholder="اختر أو اكتب" />
             <datalist id="domains">{ISLAMIC_DOMAINS.map((d) => <option key={d} value={d} />)}</datalist>

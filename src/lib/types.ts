@@ -49,6 +49,7 @@ export interface Question {
   template_key: string | null;
   tags: string[];
   is_favorite: boolean;
+  is_general?: boolean;
   created_at: string;
   updated_at: string;
   question_options?: QuestionOption[];
@@ -286,6 +287,7 @@ export interface GameBoardRow {
   avatar?: string | null;
   out?: boolean;
   hearts?: number;
+  bot?: boolean;
 }
 export interface GameTeamRow { id: string; name: string; color: string; points: number; mine?: boolean }
 
