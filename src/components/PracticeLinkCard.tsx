@@ -49,12 +49,12 @@ export default function PracticeLinkCard() {
         <h2 className="flex items-center gap-2 text-lg font-extrabold"><Users className="h-6 w-6 text-gold-500" />تحديات يبدؤها الطلاب بأنفسهم</h2>
         {link && <Badge tone={link.enabled ? 'green' : 'gray'}>{link.enabled ? 'مفعّل' : 'متوقف'}</Badge>}
       </div>
-      <p className="text-brand-700">أعطِ طلابك هذا الرابط مرة واحدة: يختار الطالب الدرس من بنك أسئلتك، ويلعب وحده أو يتحدى زملاءه المتصلين، دون أن تبدأ أنت شيئًا. تصلك نتائجهم في التقارير.</p>
+      <p className="text-brand-700">رابط ثابت يلعب منه طلابك في أي وقت.</p>
       {!link ? (
         <Button variant="gold" loading={busy} onClick={() => act(practice.createLink)}>فعّل رابط التحديات</Button>
       ) : (
         <div className="flex flex-wrap items-center gap-4">
-          <div className="rounded-2xl bg-white p-2 shadow-card"><QRCodeSVG value={practiceUrl(link.code)} size={110} level="M" marginSize={1} fgColor="#072a20" /></div>
+          <div className="rounded-2xl bg-white p-2 shadow-card"><QRCodeSVG value={practiceUrl(link.code)} size={110} level="M" marginSize={1} fgColor="#2c1b6b" /></div>
           <div className="space-y-1">
             <div className="text-sm text-brand-600">رمز التحديات</div>
             <div dir="ltr" className="font-mono text-4xl font-extrabold tracking-[.2em]" data-testid="practice-code">{link.code}</div>

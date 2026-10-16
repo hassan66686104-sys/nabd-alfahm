@@ -68,7 +68,7 @@ export default function QuickCheck() {
 
   return (
     <div className="w-full space-y-4">
-      <PageHeader title={<span className="flex items-center gap-2"><Zap className="h-8 w-8 text-gold-400" /> اختبر فهمهم الآن</span>} subtitle="اكتب سؤالًا، اضغط «ابدأ»، واعرض الرمز على الشاشة" />
+      <PageHeader title={<span className="flex items-center gap-2"><Zap className="h-8 w-8 text-gold-400" /> اختبر فهمهم الآن</span>} />
       <Card className="space-y-4">
         <div className="grid grid-cols-3 gap-2">
           {([

@@ -36,7 +36,7 @@ export default function Reports() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="تقاريري" subtitle="كل حصة محفوظة بنتائجها. افتح أي حصة للتفاصيل والتصدير." actions={
+      <PageHeader title="تقاريري" actions={
         <Select value={classFilter} onChange={(e) => setClassFilter(e.target.value)} className="w-56" aria-label="تصفية حسب الصف">
           <option value="">كل الصفوف</option>{classList.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
@@ -54,12 +54,12 @@ export default function Reports() {
                 <Tooltip labelFormatter={(_, p) => (p?.[0]?.payload?.title as string) ?? ''} formatter={(v: number, n: string) => [`${v}%`, n === 'pct' ? 'الصحة' : 'المشاركة']} contentStyle={{ direction: 'rtl', fontFamily: 'Cairo', borderRadius: 12 }} />
                 <ReferenceLine y={settings.mastery} stroke="#15803d" strokeDasharray="4 4" />
                 <ReferenceLine y={settings.reinforce} stroke="#d97706" strokeDasharray="4 4" />
-                <Line type="monotone" dataKey="pct" stroke="#0f4d3a" strokeWidth={3} dot={{ r: 5 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="pct" stroke="#6440e3" strokeWidth={3} dot={{ r: 5 }} isAnimationActive={false} />
                 <Line type="monotone" dataKey="part" stroke="#c9a227" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <p className="text-sm text-brand-600">الخط الأخضر الداكن: نسبة الصحة، والذهبي: المشاركة. المقارنة مفيدة عندما تكون الحصص متقاربة في المحتوى والصعوبة.</p>
+          <p className="text-sm text-brand-600">الخط الأخضر الداكن: نسبة الصحة، والذهبي: المشاركة.</p>
         </Card>
       )}
       {!sessions ? <Spinner /> : filtered.length === 0 ? (

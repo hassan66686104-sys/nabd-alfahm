@@ -85,8 +85,7 @@ export default function NewChallenge() {
 
   return (
     <div className="w-full space-y-4">
-      <PageHeader title={<span className="flex items-center gap-2"><Trophy className="h-7 w-7 text-gold-400" />تحدي الكأس</span>}
-        subtitle="يلعب الطلاب وحدهم: كل طالب ينتقل إلى السؤال التالي فور إجابته، ويجمع النقاط ويرمي رقم الحظ." />
+      <PageHeader title={<span className="flex items-center gap-2"><Trophy className="h-7 w-7 text-gold-400" />تحدي الكأس</span>} />
 
       <PracticeLinkCard />
       <h2 className="pt-2 text-xl font-extrabold">أو أنشئ تحديًا للفصل كله الآن</h2>
@@ -101,13 +100,12 @@ export default function NewChallenge() {
                 const on = chosen.includes(l);
                 return (
                   <button key={l} type="button" aria-pressed={on} onClick={() => toggleLesson(l)}
-                    className={cx('rounded-full border-2 px-3 py-1.5 font-bold transition', on ? 'border-transparent bg-gradient-to-r from-violet-500 to-indigo-600 text-white shadow' : 'border-brand-100 bg-white text-brand-800 hover:bg-brand-50')}>
+                    className={cx('rounded-full border-2 px-3 py-1.5 font-bold transition', on ? 'border-transparent bg-gradient-to-r from-brand-500 to-fuchsia-500 text-white shadow' : 'border-brand-100 bg-white text-brand-800 hover:bg-brand-50')}>
                     {on ? '✓ ' : ''}{l}
                   </button>
                 );
               })}
             </div>
-            <p className="mt-1 text-sm text-brand-600">تُضاف كل أسئلة الدروس المختارة وتُخلط في تحدٍّ واحد.</p>
           </div>
           <Field label="اسم التحدي"><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="مثال: تحدي الكأس — الصدق" /></Field>
         </div>
@@ -123,7 +121,6 @@ export default function NewChallenge() {
             </div>
           ))}
         </div>
-        <p className="text-sm text-brand-600">الأسئلة التي تحتاج كتابة (المفتوحة والقصيرة وملء الفراغ) لا تُضاف، فالطالب يجيب بالضغط فقط. يظهر كل سؤال لكل طالب بترتيب مختلف.</p>
       </Card>
 
       <Card className="space-y-3">

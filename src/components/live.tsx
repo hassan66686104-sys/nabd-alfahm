@@ -23,9 +23,9 @@ export function DistributionChart({ data, showCorrect, height = 260, large }: { 
           <Tooltip cursor={{ fill: '#eef7f2' }} formatter={(v: number) => [`${v} طالب`, 'العدد']} labelFormatter={(_, p) => (p?.[0]?.payload?.full as string) ?? ''} contentStyle={{ direction: 'rtl', fontFamily: 'Cairo', borderRadius: 12 }} />
           <Bar dataKey="count" radius={[10, 10, 0, 0]} isAnimationActive={false}>
             {rows.map((r, i) => (
-              <Cell key={i} fill={showCorrect ? (r.correct === true ? '#15803d' : r.correct === false ? '#b91c1c' : '#9ca3af') : i % 2 ? '#c9a227' : '#0f4d3a'} />
+              <Cell key={i} fill={showCorrect ? (r.correct === true ? '#15803d' : r.correct === false ? '#b91c1c' : '#9ca3af') : i % 2 ? '#ffb81f' : '#6440e3'} />
             ))}
-            <LabelList dataKey="count" position="top" style={{ fontSize: large ? 26 : 15, fontWeight: 800, fill: '#072a20', fontFamily: 'Cairo' }} />
+            <LabelList dataKey="count" position="top" style={{ fontSize: large ? 26 : 15, fontWeight: 800, fill: '#2c1b6b', fontFamily: 'Cairo' }} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -37,7 +37,7 @@ export function WordCloud({ texts, large }: { texts: string[]; large?: boolean }
   const words = wordFrequencies(texts, large ? 40 : 30);
   if (words.length === 0) return <p className="py-6 text-center text-brand-500">ستظهر الكلمات المتكررة هنا.</p>;
   const max = words[0].count;
-  const colors = ['#0f4d3a', '#a8851b', '#145f43', '#1f7754', '#846816', '#0b3a2c'];
+  const colors = ['#5331c4', '#f59f00', '#7856f5', '#f45d3c', '#0e9f8e', '#41279b'];
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 py-4" aria-label="سحابة الكلمات">
       {words.map((w, i) => {
@@ -61,7 +61,7 @@ export function JoinInfo({ code, count, compact, large }: { code: string; count:
   return (
     <div className={cx('flex items-center gap-4', compact ? 'flex-row' : 'flex-col text-center sm:flex-row sm:text-start')}>
       <div className="rounded-2xl bg-white p-2 shadow-card">
-        <QRCodeSVG value={url} size={large ? 260 : compact ? 88 : 150} level="M" marginSize={1} fgColor="#072a20" />
+        <QRCodeSVG value={url} size={large ? 260 : compact ? 88 : 150} level="M" marginSize={1} fgColor="#2c1b6b" />
       </div>
       <div className="space-y-1">
         <div className={cx('text-brand-600', large && 'text-2xl')}>ادخل إلى <span dir="ltr" className="font-bold">{url.replace(/^https?:\/\//, '').replace(/\/join\/.*/, '/join')}</span> واكتب الرمز</div>

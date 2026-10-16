@@ -81,7 +81,7 @@ export default function NewSession() {
 
   return (
     <div className="w-full space-y-4">
-      <PageHeader title="حصة جديدة" subtitle="خطوات قليلة: اسم الحصة، الأسئلة، ثم ابدأ" />
+      <PageHeader title="حصة جديدة" />
       <Card className="space-y-3">
         <h2 className="text-lg font-bold">1. بيانات الحصة</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

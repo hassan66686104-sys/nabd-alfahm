@@ -56,7 +56,7 @@ export default function ImportQuestions() {
 
   return (
     <div className="w-full space-y-4">
-      <PageHeader title="استيراد الأسئلة" subtitle="من ملف CSV (يفتح في Excel) أو JSON. يُتحقق من كل سؤال قبل حفظه." />
+      <PageHeader title="استيراد الأسئلة" />
       <Card className="space-y-3">
         <div className="flex flex-wrap gap-2">
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-brand-700 px-4 py-2.5 font-semibold text-white hover:bg-brand-800">

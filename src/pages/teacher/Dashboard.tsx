@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BarChart3, FileUp, Heart, MessageCircleQuestion, ThumbsUp, ThumbsDown, LibraryBig, PlayCircle, Search, Settings, Users, Zap, CalendarClock, HelpCircle, Radio, Trophy } from 'lucide-react';
-import { Badge, Button, Card, EmptyState, ErrorBox, Input, PageHeader, Spinner, StatCard } from '@/components/ui';
-import { dashboardCounts, listQuestions, listSessions } from '@/lib/api';
+import { FileUp, MessageCircleQuestion, LibraryBig, PlayCircle, Search, Zap, CalendarClock, Radio, Trophy } from 'lucide-react';
+import { Badge, Button, Card, EmptyState, ErrorBox, Input, PageHeader, Spinner } from '@/components/ui';
+import { listQuestions, listSessions } from '@/lib/api';
 import { toAppError } from '@/lib/errors';
 import { useAuth } from '@/hooks/useAuth';
 import type { Question, Session } from '@/lib/types';
@@ -19,7 +19,6 @@ export default function Dashboard() {
   const { profile } = useAuth();
   const nav = useNavigate();
   const [sessions, setSessions] = useState<Session[] | null>(null);
-  const [counts, setCounts] = useState<{ sessions: number; questions: number; participants: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [found, setFound] = useState<Question[] | null>(null);
@@ -27,8 +26,7 @@ export default function Dashboard() {
   const load = async () => {
     setError(null);
     try {
-      const [s, c] = await Promise.all([listSessions(20), dashboardCounts()]);
-      setSessions(s); setCounts(c);
+      setSessions(await listSessions(20));
     } catch (e) { setError(toAppError(e).message); }
   };
   useEffect(() => { void load(); }, []);
@@ -47,46 +45,46 @@ export default function Dashboard() {
   }, [search, sessions]);
 
   const tiles = [
-    { to: '/t/sessions/new', label: 'ابدأ حصة جديدة', icon: PlayCircle, primary: true },
-    { to: '/t/instant', label: 'الأسئلة الفورية', icon: MessageCircleQuestion, gold: true },
-    { to: '/t/challenge/new', label: 'تحدي الكأس', icon: Trophy, gold: true },
-    { to: '/t/quick', label: 'اختبر فهمهم الآن', icon: Zap },
+    { to: '/t/sessions/new', label: 'حصة جديدة', icon: PlayCircle },
+    { to: '/t/quick', label: 'اختبر فهمهم', icon: Zap },
     { to: '/t/bank', label: 'بنك الأسئلة', icon: LibraryBig },
-    { to: '/t/bank?fav=1', label: 'الأسئلة المفضلة', icon: Heart },
-    { to: '/t/reports', label: 'تقاريري', icon: BarChart3 },
-    { to: '/t/import', label: 'استيراد الأسئلة', icon: FileUp },
-    { to: '/t/settings', label: 'الإعدادات', icon: Settings },
+    { to: '/t/import', label: 'استيراد', icon: FileUp },
   ];
 
   return (
     <div className="space-y-6">
-      <PageHeader title={`أهلًا ${profile?.full_name || 'بك'}`} subtitle="ما الذي تريد معرفته عن فهم طلابك اليوم؟" />
+      <PageHeader title={`أهلًا ${profile?.full_name || 'بك'}`} />
 
-      <Link to="/t/instant" className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gradient-to-l from-brand-800 to-brand-600 p-5 text-white shadow-card transition hover:-translate-y-0.5" data-testid="instant-banner">
-        <div className="flex items-center gap-4">
-          <div className="rounded-2xl bg-white/15 p-3"><MessageCircleQuestion className="h-9 w-9 text-gold-300" /></div>
-          <div>
-            <div className="text-2xl font-extrabold">الأسئلة الفورية</div>
-            <div className="text-brand-50">اطرح سؤالًا الآن، ويجيب الطلاب بنعم أو لا، أو صح أو خطأ، وترى النتيجة فورًا.</div>
-          </div>
-        </div>
-        <span className="flex items-center gap-2 rounded-xl bg-gold-400 px-5 py-3 text-lg font-extrabold text-brand-900"><ThumbsUp className="h-5 w-5" /><ThumbsDown className="h-5 w-5" /> ابدأ</span>
-      </Link>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Link to="/t/instant" data-testid="instant-banner"
+          className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 to-fuchsia-500 p-6 text-white shadow-lift transition hover:-translate-y-1">
+          <MessageCircleQuestion className="mb-6 h-10 w-10 text-gold-300 transition group-hover:scale-110" />
+          <div className="text-2xl font-black">الأسئلة الفورية</div>
+          <div className="text-white/85">سؤال الآن، نتيجة فورًا</div>
+          <span aria-hidden className="absolute -bottom-6 -left-6 text-[7rem] opacity-15">💬</span>
+        </Link>
+        <Link to="/t/challenge/new" data-testid="challenge-banner"
+          className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-gold-300 to-coral-400 p-6 text-brand-900 shadow-lift transition hover:-translate-y-1">
+          <Trophy className="mb-6 h-10 w-10 transition group-hover:scale-110" />
+          <div className="text-2xl font-black">تحدي الكأس</div>
+          <div className="text-brand-900/80">مسابقة يلعبها الطلاب بأنفسهم</div>
+          <span aria-hidden className="absolute -bottom-6 -left-6 text-[7rem] opacity-20">🏆</span>
+        </Link>
+      </div>
 
-      <Link to="/t/challenge/new" className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gradient-to-l from-gold-400 to-gold-200 p-5 text-brand-900 shadow-card transition hover:-translate-y-0.5" data-testid="challenge-banner">
-        <div className="flex items-center gap-4">
-          <div className="rounded-2xl bg-white/50 p-3"><Trophy className="h-9 w-9 text-brand-800" /></div>
-          <div>
-            <div className="text-2xl font-extrabold">تحدي الكأس</div>
-            <div>مسابقة يلعبها الطلاب وحدهم: نقاط، رقم حظ، دروع، وقصف المجموعات، والفائز يأخذ الكأس.</div>
-          </div>
-        </div>
-        <span className="rounded-xl bg-brand-800 px-5 py-3 text-lg font-extrabold text-white">أنشئ تحديًا</span>
-      </Link>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {tiles.map((t) => (
+          <Link key={t.to} to={t.to}
+            className="flex items-center gap-3 rounded-2xl border border-brand-100 bg-white p-4 font-extrabold text-brand-900 shadow-card transition hover:-translate-y-0.5 hover:border-brand-300">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><t.icon className="h-6 w-6" /></span>
+            {t.label}
+          </Link>
+        ))}
+      </div>
 
       <div className="relative">
         <Search className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ابحث عن سؤال أو درس أو حصة محفوظة…" className="h-12 pr-10 text-lg" aria-label="بحث سريع" />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ابحث في أسئلتك وحصصك…" className="h-12 pr-10 text-lg" aria-label="بحث سريع" />
         {(found || foundSessions.length > 0) && (
           <Card className="absolute inset-x-0 top-14 z-20 max-h-96 space-y-1 overflow-y-auto p-2">
             {foundSessions.map((s) => (
@@ -105,29 +103,13 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {tiles.map((t) => (
-          <Link key={t.to} to={t.to}
-            className={`flex min-h-[110px] flex-col justify-between rounded-2xl p-4 shadow-card transition hover:-translate-y-0.5 ${t.primary ? 'bg-brand-700 text-white' : t.gold ? 'bg-gold-400 text-brand-900' : 'border border-brand-100 bg-white text-brand-800'}`}>
-            <t.icon className="h-8 w-8" />
-            <span className="text-lg font-extrabold">{t.label}</span>
-          </Link>
-        ))}
-      </div>
-
       {error && <ErrorBox error={error} onRetry={load} />}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="الحصص" value={counts?.sessions ?? '—'} icon={<CalendarClock className="h-6 w-6" />} />
-        <StatCard label="الأسئلة في البنك" value={counts?.questions ?? '—'} icon={<HelpCircle className="h-6 w-6" />} tone="gold" />
-        <StatCard label="مشاركات الطلاب" value={counts?.participants ?? '—'} icon={<Users className="h-6 w-6" />} tone="green" />
-      </div>
 
       <section>
-        <h2 className="mb-3 text-xl font-extrabold">الحصص السابقة</h2>
+        <h2 className="mb-3 text-xl font-extrabold">آخر الحصص</h2>
         {!sessions ? <Spinner /> : sessions.length === 0 ? (
-          <EmptyState icon={<PlayCircle className="h-10 w-10" />} title="لم تبدأ أي حصة بعد" action={<Button onClick={() => nav('/t/quick')} icon={<Zap className="h-5 w-5" />} variant="gold">جرّب «اختبر فهمهم الآن»</Button>}>
-            ابدأ بسؤال سريع، أو أنشئ بنك أسئلتك أولًا.
+          <EmptyState icon={<PlayCircle className="h-10 w-10" />} title="لم تبدأ أي حصة بعد" action={<Button onClick={() => nav('/t/quick')} icon={<Zap className="h-5 w-5" />} variant="gold">جرّب «اختبر فهمهم»</Button>}>
           </EmptyState>
         ) : (
           <div className="grid gap-2">

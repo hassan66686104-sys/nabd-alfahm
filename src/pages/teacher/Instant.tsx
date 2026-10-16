@@ -96,8 +96,7 @@ function InstantStart({ onStarted }: { onStarted: (id: string) => void }) {
   };
   return (
     <div className="w-full space-y-4">
-      <PageHeader title={<span className="flex items-center gap-2"><MessageCircleQuestion className="h-8 w-8 text-gold-400" /> الأسئلة الفورية</span>}
-        subtitle="اطرح سؤالًا في أي لحظة من الدرس، ويجيب الطلاب من أجهزتهم بنعم أو لا، أو صح أو خطأ، أو يكتبون إجابتهم فتظهر على الشاشة فورًا." />
+      <PageHeader title={<span className="flex items-center gap-2"><MessageCircleQuestion className="h-8 w-8 text-gold-400" /> الأسئلة الفورية</span>} />
       <Card className="space-y-4 p-6 text-center">
         <div className="flex justify-center gap-3 text-brand-700"><ThumbsUp className="h-10 w-10" /><ThumbsDown className="h-10 w-10" /></div>
         <p className="text-lg">ابدأ جلسة واحدة، اعرض الرمز على الطلاب، ثم اطرح ما تشاء من الأسئلة واحدًا تلو الآخر دون تجهيز مسبق.</p>
@@ -193,7 +192,6 @@ function InstantLive({ sessionId, onEnded }: { sessionId: string; onEnded: () =>
           <Button size="xl" variant="gold" className="w-full" loading={busy === 'ask'} disabled={!!busy && busy !== 'ask'} icon={<Send className="h-6 w-6" />} onClick={ask}>
             اطرح السؤال الآن
           </Button>
-          <p className="text-sm text-brand-600">طرح سؤال جديد يُغلق السؤال السابق تلقائيًا.</p>
         </Card>
 
         {current?.snapshot.answer_format === 'open' ? (

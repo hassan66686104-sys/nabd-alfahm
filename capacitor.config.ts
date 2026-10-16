@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   ios: {
     contentInset: 'always',
-    backgroundColor: '#0f4d3a',
+    backgroundColor: '#5331c4',
     limitsNavigationsToAppBoundDomains: false,
   },
 };

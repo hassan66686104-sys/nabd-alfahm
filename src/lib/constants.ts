@@ -102,7 +102,7 @@ export const GAME_MODES: { value: GameMode; label: string; hint: string }[] = [
 ];
 export const gameLabel = (g: GameMode) => GAME_MODES.find((x) => x.value === g)?.label ?? g;
 
-export const TEAM_COLORS = ['#0f4d3a', '#c9a227', '#1d4ed8', '#b91c1c', '#7c3aed', '#0e7490'];
+export const TEAM_COLORS = ['#6440e3', '#f59f00', '#1d4ed8', '#b91c1c', '#7c3aed', '#0e7490'];
 
 export const OPTION_LETTERS = ['أ', 'ب', 'ج', 'د', 'هـ', 'و', 'ز', 'ح', 'ط', 'ي'];
 

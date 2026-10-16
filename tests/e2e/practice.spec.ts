@@ -62,6 +62,7 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   // الطالب الأول على لابتوب: الصفحات تملأ عرض الشاشة
   const solo = await (await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'ar' })).newPage();
   await solo.goto('/');
+  await solo.getByRole('button', { name: 'طالب', exact: true }).click();
   await solo.getByTestId('landing-practice').click();
   // إن وُجد أكثر من معلم أتاح تحدياته يختار الطالب معلمه أولًا
   const mine = solo.getByRole('button', { name: tname });

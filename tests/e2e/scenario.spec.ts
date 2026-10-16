@@ -206,7 +206,7 @@ test('سيناريو الحصة الكامل من البداية إلى التق
     const c = await browser.newContext({ ...devices[dev], storageState: await tctx.storageState(), locale: 'ar' });
     const p = await c.newPage();
     await p.goto('/t');
-    await expect(p.getByText('ابدأ حصة جديدة')).toBeVisible();
+    await expect(p.getByText('حصة جديدة', { exact: true })).toBeVisible();
     const overflow = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(1);
     await shot(p, name);
@@ -224,7 +224,7 @@ test('اختبر فهمهم الآن: من السؤال إلى الحصة بسر
   await t.getByRole('button', { name: 'إنشاء الحساب' }).click();
   await expect(t.getByText('أهلًا أ. يوسف')).toBeVisible();
   const started = Date.now();
-  await t.getByRole('link', { name: 'اختبر فهمهم الآن' }).first().click();
+  await t.getByRole('link', { name: 'اختبر فهمهم', exact: true }).first().click();
   await t.getByRole('button', { name: /صح أو خطأ/ }).click();
   await t.getByLabel('السؤال', { exact: true }).fill('الصدق من الأخلاق الحميدة');
   await t.getByRole('button', { name: 'ابدأ الآن' }).click();

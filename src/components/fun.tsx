@@ -17,8 +17,8 @@ const FLOATERS = Array.from({ length: 16 }, (_, i) => ({
 // خلفية اللعب: ألوان هادئة متدرجة (بنفسجي، أرجواني، أزرق مخضر) لا فاقعة
 // خلفية فاتحة (light) لصفحات المعلم وشاشة العرض حتى يبقى النص واضحًا
 const TONES = {
-  game: { bg: 'bg-[linear-gradient(135deg,#2e2a6b,#4b3f8f,#6b4a8c,#2f6b7c,#2e2a6b)]', blobs: ['bg-amber-200/20', 'bg-sky-300/20', 'bg-pink-300/20'], floatOpacity: 0.55, count: 16 },
-  light: { bg: 'bg-[linear-gradient(135deg,#fbf8f1,#efeafc,#e7f4ef,#fdf0f3,#fbf8f1)]', blobs: ['bg-amber-200/40', 'bg-violet-200/40', 'bg-emerald-200/40'], floatOpacity: 0.28, count: 10 },
+  game: { bg: 'bg-[linear-gradient(135deg,#3b2491,#5a3bd6,#8b3fc8,#3a62c9,#3b2491)]', blobs: ['bg-amber-200/20', 'bg-sky-300/20', 'bg-pink-300/20'], floatOpacity: 0.55, count: 16 },
+  light: { bg: 'bg-[linear-gradient(135deg,#faf9ff,#f1edff,#fff6e8,#f4efff,#faf9ff)]', blobs: ['bg-amber-200/40', 'bg-violet-200/40', 'bg-emerald-200/40'], floatOpacity: 0.28, count: 10 },
 };
 
 export function FunBackdrop({ children, tone = 'game', className }: { children: ReactNode; tone?: keyof typeof TONES; className?: string }) {
@@ -93,7 +93,7 @@ export function useBump(value: unknown): string {
 
 // ألوان زاهية متناوبة للبطاقات والإحصاءات
 export const VIVID = [
-  'from-violet-500 to-indigo-600',
+  'from-brand-500 to-fuchsia-500',
   'from-amber-400 to-orange-500',
   'from-sky-500 to-cyan-600',
   'from-emerald-500 to-teal-600',
