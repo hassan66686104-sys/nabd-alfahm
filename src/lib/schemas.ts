@@ -122,7 +122,7 @@ export const sessionSchema = z.object({
 
 export const authSchema = z.object({
   email: z.string().trim().email('البريد الإلكتروني غير صالح'),
-  password: z.string().min(8, 'كلمة المرور 8 أحرف على الأقل'),
+  password: z.string().min(6, 'كلمة المرور 6 أحرف على الأقل'),
   full_name: z.string().trim().max(120).optional(),
 });
 
