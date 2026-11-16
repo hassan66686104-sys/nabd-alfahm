@@ -16,7 +16,7 @@ export async function handleSignup(input, ip, env) {
   const password = typeof input?.password === 'string' ? input.password : '';
   const fullName = typeof input?.full_name === 'string' ? input.full_name.trim().replace(/\s+/g, ' ') : '';
   if (fullName.length < 2 || fullName.length > 120) return reply({ ok: false, error: 'NAME_REQUIRED' });
-  if (password.length < 8 || password.length > 72) return reply({ ok: false, error: 'WEAK_PASSWORD' });
+  if (!/^\d{6}$/.test(password)) return reply({ ok: false, error: 'WEAK_PASSWORD' });
   const headers = { apikey: env.serviceKey, authorization: `Bearer ${env.serviceKey}`, 'content-type': 'application/json' };
 
   const rl = await env.fetch(`${env.url}/rest/v1/rpc/teacher_signup_allowed`, { method: 'POST', headers, body: JSON.stringify({ p_ip: ip || 'unknown' }) });

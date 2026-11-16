@@ -85,7 +85,7 @@ export function Signup() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (name.trim().length < 2) return setError('اكتب اسمك');
-    if (password.length < 8) return setError('كلمة المرور 8 أحرف على الأقل');
+    if (!/^\d{6}$/.test(password)) return setError('كلمة المرور ستة أرقام فقط');
     setBusy(true); setError(null);
     // لا تظهر رسالة النجاح إلا بعد أن يؤكد الخادم إنشاء الحساب والدخول
     try { await auth.signUpPasswordOnly(password, name.trim()); nav('/t', { replace: true }); }
@@ -96,8 +96,8 @@ export function Signup() {
     <Shell title="حساب معلم جديد" footer={<>لديك حساب؟ <Link className="font-bold underline" to="/login">سجّل الدخول</Link></>}>
       <form onSubmit={submit} className="space-y-4" noValidate>
         <Field label="اسمك"><Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required placeholder="مثال: أ. الحسن علي" /></Field>
-        <Field label="كلمة المرور" hint="8 أحرف على الأقل. ستدخل بها وحدها، فاحفظها جيدًا ولا تشاركها.">
-          <Input type="password" dir="ltr" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required className="text-lg" />
+        <Field label="كلمة المرور" hint="ستة أرقام فقط. ستدخل بها وحدها، فاحفظها جيدًا ولا تشاركها.">
+          <Input type="password" inputMode="numeric" pattern="\d{6}" maxLength={6} dir="ltr" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value.replace(/\D/g, ''))} required className="text-center text-lg tracking-[.4em]" />
         </Field>
         {error && <ErrorBox error={error} />}
         <Button type="submit" size="lg" className="w-full" loading={busy}>إنشاء الحساب</Button>

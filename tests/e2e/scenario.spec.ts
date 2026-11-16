@@ -8,7 +8,7 @@ mkdirSync(SHOTS, { recursive: true });
 const shot = (p: Page, name: string) => p.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
 
 const stamp = Date.now();
-const teacher = { name: 'أ. فاطمة', password: `Pw-${stamp}-fatima` };
+const teacher = { name: 'أ. فاطمة', password: String(100000 + Math.floor(Math.random() * 900000)) };
 
 async function createMcq(page: Page, text: string, options: string[], correct: number) {
   await page.goto('/t/bank/new');
@@ -226,7 +226,7 @@ test('اختبر فهمهم الآن: من السؤال إلى الحصة بسر
   await t.getByLabel('كلمة المرور').fill(teacher.password);
   await t.getByRole('button', { name: 'إنشاء الحساب' }).click();
   await expect(t.getByText(/كلمة المرور هذه لا تصلح/)).toBeVisible();
-  await t.getByLabel('كلمة المرور').fill(`${teacher.password}-yousef`);
+  await t.getByLabel('كلمة المرور').fill(String(100000 + ((Number(teacher.password) + 1) % 900000)));
   await t.getByRole('button', { name: 'إنشاء الحساب' }).click();
   await expect(t.getByText('أهلًا أ. يوسف')).toBeVisible();
   const started = Date.now();

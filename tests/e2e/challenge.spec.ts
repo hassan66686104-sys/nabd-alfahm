@@ -1,8 +1,8 @@
 // تحدي الكأس: الطلاب يلعبون وحدهم، ينتقلون للسؤال التالي فور الإجابة، يرمون رقم الحظ، ويفوز أول من يصل للهدف
 import { test, expect, devices, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
-// كلمة المرور هي هوية المعلم، فتكون فريدة لكل تشغيل
-const PW = `Pw-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+// كلمة المرور ستة أرقام، وهي هوية المعلم، فتُولَّد عشوائيًا لكل تشغيل
+const PW = String(100000 + Math.floor(Math.random() * 900000)); // كلمة المرور ستة أرقام
 
 const SHOTS = process.env.E2E_SHOTS ?? 'test-results/screens';
 mkdirSync(SHOTS, { recursive: true });
