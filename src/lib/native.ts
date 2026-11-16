@@ -5,5 +5,5 @@ export const isNativeApp = () => Capacitor.isNativePlatform();
 
 export function openPresent(id: string, nav: (to: string) => void, name = '_blank') {
   if (isNativeApp()) nav(`/present/${id}`);
-  else window.open(`/present/${id}`, name, 'noopener');
+  else window.open(`${import.meta.env.BASE_URL}present/${id}`, name, 'noopener');
 }
