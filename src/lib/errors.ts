@@ -88,7 +88,7 @@ export function toAppError(e: unknown): AppError {
   if (/Invalid login credentials/i.test(msg)) return new AppError('AUTH', 'البريد الإلكتروني أو كلمة المرور غير صحيحة.');
   if (/Email not confirmed/i.test(msg)) return new AppError('AUTH', 'لم يتم تأكيد البريد الإلكتروني بعد. افتح رسالة التأكيد في بريدك.');
   if (/User already registered/i.test(msg)) return new AppError('AUTH', 'هذا البريد مسجل مسبقًا. جرّب تسجيل الدخول.');
-  if (/Password should be at least/i.test(msg)) return new AppError('AUTH', 'كلمة المرور قصيرة جدًا (8 أحرف على الأقل).');
+  if (/Password should be at least/i.test(msg)) return new AppError('AUTH', 'كلمة المرور قصيرة جدًا (6 أحرف على الأقل).');
   if (/rate limit/i.test(msg)) return new AppError('AUTH', 'محاولات كثيرة. انتظر قليلًا ثم حاول مجددًا.');
   return new AppError('UNKNOWN', 'حدث خطأ غير متوقع. حاول مرة أخرى.' + (import.meta.env.DEV && msg ? ` (${msg})` : ''));
 }

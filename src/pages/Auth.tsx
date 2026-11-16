@@ -97,7 +97,7 @@ export function Signup() {
       <form onSubmit={submit} className="space-y-4" noValidate>
         <Field label="الاسم"><Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required /></Field>
         <Field label="البريد الإلكتروني"><Input type="email" dir="ltr" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></Field>
-        <Field label="كلمة المرور" hint="8 أحرف على الأقل"><Input type="password" dir="ltr" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></Field>
+        <Field label="كلمة المرور" hint="6 أحرف على الأقل"><Input type="password" dir="ltr" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></Field>
         {error && <ErrorBox error={error} />}
         <Button type="submit" size="lg" className="w-full" loading={busy}>إنشاء الحساب</Button>
       </form>
@@ -119,7 +119,7 @@ export function ResetPassword() {
       <Shell title="كلمة مرور جديدة">
         <form className="space-y-4" onSubmit={async (e) => {
           e.preventDefault();
-          if (password.length < 8) return setError('كلمة المرور 8 أحرف على الأقل');
+          if (password.length < 6) return setError('كلمة المرور 6 أحرف على الأقل');
           setBusy(true);
           try { await auth.updatePassword(password); toast('تم تغيير كلمة المرور'); nav('/t'); }
           catch (err) { setError(toAppError(err).message); } finally { setBusy(false); }
