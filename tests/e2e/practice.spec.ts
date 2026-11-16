@@ -1,6 +1,8 @@
 // التحدي الذاتي: الطالب يختار الدرس ويبدأ وحده أو مع زميل متصل، دون أن يبدأ المعلم شيئًا
 import { test, expect, devices, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
+// كلمة المرور هي هوية المعلم، فتكون فريدة لكل تشغيل
+const PW = `Pw-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const SHOTS = process.env.E2E_SHOTS ?? 'test-results/screens';
 mkdirSync(SHOTS, { recursive: true });
@@ -34,9 +36,8 @@ test('التحدي الذاتي: الطالب يختار الدرس ويلعب �
   const t = await ctx.newPage();
   await t.goto('/signup');
   const tname = `أ. الحسن ${Date.now() % 100000}`;
-  await t.getByLabel('الاسم').fill(tname);
-  await t.getByLabel('البريد الإلكتروني').fill(`practice${Date.now()}@test.local`);
-  await t.getByLabel('كلمة المرور').fill('Passw0rd!x');
+  await t.getByLabel('اسمك').fill(tname);
+  await t.getByLabel('كلمة المرور').fill(PW);
   await t.getByRole('button', { name: 'إنشاء الحساب' }).click();
   await expect(t.getByText(`أهلًا ${tname}`)).toBeVisible();
   await t.goto('/t/import');

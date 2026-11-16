@@ -1,5 +1,7 @@
 // متطلبات المتجر: صفحة الخصوصية، وحذف المعلم حسابه بنفسه مع بياناته
 import { test, expect } from '@playwright/test';
+// كلمة المرور هي هوية المعلم، فتكون فريدة لكل تشغيل
+const PW = `Pw-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 test('سياسة الخصوصية وحذف الحساب من الإعدادات', async ({ page }) => {
   await page.goto('/');
@@ -7,11 +9,9 @@ test('سياسة الخصوصية وحذف الحساب من الإعدادات'
   await expect(page.getByRole('heading', { name: 'سياسة الخصوصية' })).toBeVisible();
   await expect(page.getByText('لا نبيع البيانات')).toBeVisible();
 
-  const email = `del${Date.now()}@test.local`;
   await page.goto('/signup');
-  await page.getByLabel('الاسم').fill('معلم مؤقت');
-  await page.getByLabel('البريد الإلكتروني').fill(email);
-  await page.getByLabel('كلمة المرور').fill('Passw0rd!x');
+  await page.getByLabel('اسمك').fill('معلم مؤقت');
+  await page.getByLabel('كلمة المرور').fill(PW);
   await page.getByRole('button', { name: 'إنشاء الحساب' }).click();
   await expect(page.getByText('أهلًا معلم مؤقت')).toBeVisible();
 
@@ -26,8 +26,7 @@ test('سياسة الخصوصية وحذف الحساب من الإعدادات'
 
   // لا يمكن الدخول بالحساب المحذوف
   await page.goto('/login');
-  await page.getByLabel('البريد الإلكتروني').fill(email);
-  await page.getByLabel('كلمة المرور').fill('Passw0rd!x');
+  await page.getByLabel('كلمة المرور').fill(PW);
   await page.getByRole('button', { name: 'دخول' }).click();
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page).toHaveURL(/\/login/);

@@ -8,6 +8,7 @@ import type {
 import type { QuestionInput } from './schemas';
 import type { SessionSummary } from './stats';
 import { DEFAULT_SETTINGS } from './constants';
+import { emailForPassword, PASSWORD_DOMAIN } from '../../supabase/functions/teacher-signup/handler.js';
 
 interface Res<T> { data: T | null; error: unknown }
 
@@ -28,7 +29,24 @@ async function run<T>(p: PromiseLike<Res<T>>): Promise<T> {
 }
 
 // ---------- المصادقة ----------
+// حساب المعلم بكلمة مرور فقط: يُشتق من كلمة المرور بريد داخلي لا يُرسل إليه شيء
+export const isPasswordOnlyEmail = (email?: string | null) => !!email?.endsWith(`@${PASSWORD_DOMAIN}`);
+
 export const auth = {
+  async signInWithPasswordOnly(password: string) {
+    ensure();
+    const { error } = await supabase.auth.signInWithPassword({ email: await emailForPassword(password), password });
+    if (error) throw /Invalid login credentials/i.test(error.message) ? new AppError('AUTH', 'كلمة المرور غير صحيحة.') : toAppError(error);
+  },
+  // يُنشأ الحساب على الخادم (دون رسالة تأكيد) ثم يدخل المعلم مباشرة
+  async signUpPasswordOnly(password: string, fullName: string) {
+    ensure();
+    const { data, error } = await supabase.functions.invoke('teacher-signup', { body: { password, full_name: fullName } });
+    if (error) throw toAppError(error);
+    const r = data as { ok: boolean; error?: string };
+    if (!r?.ok) throw new AppError(r?.error ?? 'SIGNUP_FAILED');
+    await this.signInWithPasswordOnly(password);
+  },
   async signIn(email: string, password: string) {
     ensure();
     const { error } = await supabase.auth.signInWithPassword({ email, password });

@@ -3,7 +3,7 @@ import { BarChart3, Home, LibraryBig, LogOut, Settings, Zap } from 'lucide-react
 import { Brand, Credit } from './Logo';
 import { OfflineBanner } from './feedback';
 import { useAuth } from '@/hooks/useAuth';
-import { auth } from '@/lib/api';
+import { auth, isPasswordOnlyEmail } from '@/lib/api';
 import { cx } from './ui';
 import { FunBackdrop } from './fun';
 import SoundToggle from './SoundToggle';
@@ -35,7 +35,7 @@ export default function TeacherLayout() {
           </nav>
           <div className="flex items-center gap-2">
             <SoundToggle className="text-brand-600 hover:bg-brand-50" />
-            <span className="hidden text-sm text-brand-600 sm:inline">{profile?.full_name || session?.user.email}</span>
+            <span className="hidden text-sm text-brand-600 sm:inline">{profile?.full_name || (isPasswordOnlyEmail(session?.user.email) ? '' : session?.user.email)}</span>
             <button onClick={async () => { await auth.signOut(); navigate('/'); }} className="rounded-xl p-2 text-brand-600 hover:bg-brand-50" title="تسجيل الخروج" aria-label="تسجيل الخروج">
               <LogOut className="h-5 w-5" />
             </button>

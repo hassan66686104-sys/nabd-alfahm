@@ -8,7 +8,7 @@ mkdirSync(SHOTS, { recursive: true });
 const shot = (p: Page, name: string) => p.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
 
 const stamp = Date.now();
-const teacher = { name: 'أ. فاطمة', email: `teacher${stamp}@test.local`, password: 'Passw0rd!x' };
+const teacher = { name: 'أ. فاطمة', password: `Pw-${stamp}-fatima` };
 
 async function createMcq(page: Page, text: string, options: string[], correct: number) {
   await page.goto('/t/bank/new');
@@ -38,8 +38,7 @@ test('سيناريو الحصة الكامل من البداية إلى التق
 
   // 1. المعلم ينشئ حسابًا ويدخل
   await t.goto('/signup');
-  await t.getByLabel('الاسم').fill(teacher.name);
-  await t.getByLabel('البريد الإلكتروني').fill(teacher.email);
+  await t.getByLabel('اسمك').fill(teacher.name);
   await t.getByLabel('كلمة المرور').fill(teacher.password);
   await t.getByRole('button', { name: 'إنشاء الحساب' }).click();
   await expect(t.getByText(`أهلًا ${teacher.name}`)).toBeVisible();
@@ -48,7 +47,11 @@ test('سيناريو الحصة الكامل من البداية إلى التق
   // تسجيل الخروج والدخول مجددًا
   await t.getByRole('button', { name: 'تسجيل الخروج' }).click();
   await t.goto('/login');
-  await t.getByLabel('البريد الإلكتروني').fill(teacher.email);
+  // الدخول بكلمة المرور وحدها
+  await expect(t.getByLabel('البريد الإلكتروني')).toHaveCount(0);
+  await t.getByLabel('كلمة المرور').fill('خطأ-خطأ-خطأ');
+  await t.getByRole('button', { name: 'دخول' }).click();
+  await expect(t.getByText('كلمة المرور غير صحيحة.')).toBeVisible();
   await t.getByLabel('كلمة المرور').fill(teacher.password);
   await t.getByRole('button', { name: 'دخول' }).click();
   await expect(t.getByText(`أهلًا ${teacher.name}`)).toBeVisible();
@@ -218,9 +221,12 @@ test('اختبر فهمهم الآن: من السؤال إلى الحصة بسر
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'ar' });
   const t = await ctx.newPage();
   await t.goto('/signup');
-  await t.getByLabel('الاسم').fill('أ. يوسف');
-  await t.getByLabel('البريد الإلكتروني').fill(`quick${Date.now()}@test.local`);
+  await t.getByLabel('اسمك').fill('أ. يوسف');
+  // كلمة مرور مستخدمة لا تُقبل لحساب جديد
   await t.getByLabel('كلمة المرور').fill(teacher.password);
+  await t.getByRole('button', { name: 'إنشاء الحساب' }).click();
+  await expect(t.getByText(/كلمة المرور هذه لا تصلح/)).toBeVisible();
+  await t.getByLabel('كلمة المرور').fill(`${teacher.password}-yousef`);
   await t.getByRole('button', { name: 'إنشاء الحساب' }).click();
   await expect(t.getByText('أهلًا أ. يوسف')).toBeVisible();
   const started = Date.now();

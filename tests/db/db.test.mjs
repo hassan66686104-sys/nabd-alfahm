@@ -837,3 +837,12 @@ test('سؤال مفتوح فوري، اسم إجباري في التحديات،
   const mins = (await as('postgres', null, `select round(extract(epoch from ends_at - started_at) / 60)::int m from sessions where id=$1`, [pr.session_id])).rows[0].m;
   assert.equal(mins, 7);
 });
+
+test('حد إنشاء حسابات المعلمين بكلمة المرور فقط: خمس في الساعة لكل عنوان، ولا يستدعيه إلا الخادم', async () => {
+  await assert.rejects(anon('select public.teacher_signup_allowed($1)', ['1.2.3.4']), /permission denied/);
+  await assert.rejects(anon('select * from public.teacher_signups'), /permission denied/);
+  const allowed = [];
+  for (let i = 0; i < 6; i++) allowed.push((await as('service_role', null, 'select public.teacher_signup_allowed($1) as r', ['1.2.3.4'])).rows[0].r);
+  assert.deepEqual(allowed, [true, true, true, true, true, false]);
+  assert.equal((await as('service_role', null, 'select public.teacher_signup_allowed($1) as r', ['5.6.7.8'])).rows[0].r, true);
+});

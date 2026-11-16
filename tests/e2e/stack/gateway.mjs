@@ -1,6 +1,8 @@
 // بوابة بسيطة تحاكي Kong في Supabase: توجه /auth/v1 إلى GoTrue و /rest/v1 إلى PostgREST.
 // للاختبار المحلي فقط. لا تدعم Realtime (يرفض اتصال websocket فيتحول التطبيق للاستطلاع الدوري).
 import http from 'node:http';
+import { handleSignup } from '../../../supabase/functions/teacher-signup/handler.js';
+import { SERVICE_KEY } from './jwt.mjs';
 const PORT = Number(process.env.GATEWAY_PORT ?? 54321);
 const routes = [
   { prefix: '/auth/v1', port: Number(process.env.GOTRUE_PORT ?? 9999) },
@@ -14,6 +16,21 @@ const cors = {
 };
 http.createServer((req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
+  // دالة الخادم teacher-signup: نفس الكود الذي يعمل على Supabase Edge
+  if (req.url.startsWith('/functions/v1/teacher-signup') && req.method === 'POST') {
+    let raw = '';
+    req.on('data', (c) => { raw += c; });
+    req.on('end', async () => {
+      let body = {};
+      try { body = JSON.parse(raw || '{}'); } catch { /* جسم غير صالح */ }
+      // كل الاختبارات من عنوان واحد، فنعطي كل طلب عنوانًا مستقلًا حتى لا يوقفها حد الإنشاء (يُختبر الحد في اختبارات قاعدة البيانات)
+      const out = await handleSignup(body, `e2e-${Date.now()}-${Math.random()}`, { url: `http://127.0.0.1:${PORT}`, serviceKey: SERVICE_KEY, fetch })
+        .catch(() => ({ status: 500, body: { ok: false, error: 'SIGNUP_FAILED' } }));
+      res.writeHead(out.status, { ...cors, 'content-type': 'application/json' });
+      res.end(JSON.stringify(out.body));
+    });
+    return;
+  }
   const r = routes.find((x) => req.url.startsWith(x.prefix));
   if (!r) { res.writeHead(404, cors); return res.end('{"message":"not available in local test gateway"}'); }
   const headers = { ...req.headers, 'x-forwarded-for': req.socket.remoteAddress ?? '127.0.0.1' };

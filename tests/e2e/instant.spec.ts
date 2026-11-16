@@ -1,6 +1,8 @@
 // الأسئلة الفورية: معلم يطرح أسئلة نعم/لا وصح/خطأ، وطالبان يجيبان من هاتفين
 import { test, expect, devices, type Browser } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
+// كلمة المرور هي هوية المعلم، فتكون فريدة لكل تشغيل
+const PW = `Pw-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const SHOTS = process.env.E2E_SHOTS ?? 'test-results/screens';
 mkdirSync(SHOTS, { recursive: true });
@@ -19,9 +21,8 @@ test('الأسئلة الفورية: سؤال رأي بنعم/لا ثم سؤال
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'ar' });
   const t = await ctx.newPage();
   await t.goto('/signup');
-  await t.getByLabel('الاسم').fill('أ. الحسن');
-  await t.getByLabel('البريد الإلكتروني').fill(`instant${Date.now()}@test.local`);
-  await t.getByLabel('كلمة المرور').fill('Passw0rd!x');
+  await t.getByLabel('اسمك').fill('أ. الحسن');
+  await t.getByLabel('كلمة المرور').fill(PW);
   await t.getByRole('button', { name: 'إنشاء الحساب' }).click();
   await expect(t.getByText('أهلًا أ. الحسن')).toBeVisible();
 

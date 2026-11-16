@@ -35,6 +35,8 @@ export function Login() {
   const { session } = useAuth();
   const [params] = useSearchParams();
   const nav = useNavigate();
+  // الدخول بكلمة المرور فقط، والبريد متاح لأصحاب الحسابات القديمة
+  const [withEmail, setWithEmail] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -43,21 +45,30 @@ export function Login() {
   if (session) return <Navigate to={next} replace />;
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const v = authSchema.safeParse({ email, password });
-    if (!v.success) return setError(firstError(v.error));
+    if (withEmail) {
+      const v = authSchema.safeParse({ email, password });
+      if (!v.success) return setError(firstError(v.error));
+    } else if (!password) return setError('اكتب كلمة المرور');
     setBusy(true); setError(null);
-    try { await auth.signIn(email.trim(), password); nav(next, { replace: true }); }
+    try {
+      if (withEmail) await auth.signIn(email.trim(), password);
+      else await auth.signInWithPasswordOnly(password);
+      nav(next, { replace: true });
+    }
     catch (err) { setError(toAppError(err).message); }
     finally { setBusy(false); }
   };
   return (
     <Shell title="دخول المعلم" footer={<>ليس لديك حساب؟ <Link className="font-bold underline" to="/signup">أنشئ حسابًا</Link></>}>
       <form onSubmit={submit} className="space-y-4" noValidate>
-        <Field label="البريد الإلكتروني"><Input type="email" dir="ltr" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></Field>
-        <Field label="كلمة المرور"><Input type="password" dir="ltr" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></Field>
+        {withEmail && <Field label="البريد الإلكتروني"><Input type="email" dir="ltr" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></Field>}
+        <Field label="كلمة المرور"><Input type="password" dir="ltr" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus className="text-lg" /></Field>
         {error && <ErrorBox error={error} />}
         <Button type="submit" size="lg" className="w-full" loading={busy}>دخول</Button>
-        <Link to="/reset" className="block text-center text-sm text-brand-600 underline">نسيت كلمة المرور؟</Link>
+        <button type="button" onClick={() => { setWithEmail((v) => !v); setError(null); }} className="block w-full text-center text-sm text-brand-600 underline" data-testid="toggle-email-login">
+          {withEmail ? 'الدخول بكلمة المرور فقط' : 'حسابك القديم بالبريد الإلكتروني؟'}
+        </button>
+        {withEmail && <Link to="/reset" className="block text-center text-sm text-brand-600 underline">نسيت كلمة المرور؟</Link>}
       </form>
     </Shell>
   );
@@ -67,37 +78,27 @@ export function Signup() {
   const { session } = useAuth();
   const nav = useNavigate();
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState(false);
   if (session) return <Navigate to="/t" replace />;
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const v = authSchema.safeParse({ email, password, full_name: name });
-    if (!v.success) return setError(firstError(v.error));
     if (name.trim().length < 2) return setError('اكتب اسمك');
+    if (password.length < 8) return setError('كلمة المرور 8 أحرف على الأقل');
     setBusy(true); setError(null);
-    try {
-      const r = await auth.signUp(email.trim(), password, name.trim());
-      if (r.needsConfirmation) setSent(true);
-      else nav('/t', { replace: true });
-    } catch (err) { setError(toAppError(err).message); }
+    // لا تظهر رسالة النجاح إلا بعد أن يؤكد الخادم إنشاء الحساب والدخول
+    try { await auth.signUpPasswordOnly(password, name.trim()); nav('/t', { replace: true }); }
+    catch (err) { setError(toAppError(err).message); }
     finally { setBusy(false); }
   };
-  if (sent) return (
-    <Shell title="تحقق من بريدك">
-      <p className="text-brand-700">أرسلنا رابط تأكيد إلى <b dir="ltr">{email}</b>. افتح الرابط لتفعيل حسابك ثم سجّل الدخول.</p>
-      <Button onClick={() => nav('/login')} className="w-full">الذهاب إلى تسجيل الدخول</Button>
-    </Shell>
-  );
   return (
     <Shell title="حساب معلم جديد" footer={<>لديك حساب؟ <Link className="font-bold underline" to="/login">سجّل الدخول</Link></>}>
       <form onSubmit={submit} className="space-y-4" noValidate>
-        <Field label="الاسم"><Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required /></Field>
-        <Field label="البريد الإلكتروني"><Input type="email" dir="ltr" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></Field>
-        <Field label="كلمة المرور" hint="6 أحرف على الأقل"><Input type="password" dir="ltr" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></Field>
+        <Field label="اسمك"><Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required placeholder="مثال: أ. الحسن علي" /></Field>
+        <Field label="كلمة المرور" hint="8 أحرف على الأقل. ستدخل بها وحدها، فاحفظها جيدًا ولا تشاركها.">
+          <Input type="password" dir="ltr" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required className="text-lg" />
+        </Field>
         {error && <ErrorBox error={error} />}
         <Button type="submit" size="lg" className="w-full" loading={busy}>إنشاء الحساب</Button>
       </form>
