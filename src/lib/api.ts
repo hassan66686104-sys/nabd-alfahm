@@ -341,6 +341,11 @@ export const game = {
   end: (sessionId: string) => run(supabase.rpc('game_end', { p_session: sessionId })),
   // زيادة وقت التحدي أو إنقاصه بالدقائق (قبل البدء يعدّل المدة المخططة)
   addTime: (sessionId: string, minutes: number) => run(supabase.rpc('game_add_time', { p_session: sessionId, p_minutes: minutes })),
+  // وضع تحكم المعلم: إرسال السؤال التالي (أو سؤال يختاره المعلم) لكل الطلاب معًا
+  sendQuestion: (sessionId: string, sqId: string | null = null) =>
+    run(supabase.rpc('game_send_question', { p_session: sessionId, p_sq: sqId })) as Promise<{ ok: true; done: boolean; sq_id?: string; sent: number; total: number } | { ok: false; error: string }>,
+  answers: (sqId: string) =>
+    run(supabase.from('responses').select('participant_id,is_correct').eq('sq_id', sqId)) as Promise<{ participant_id: string; is_correct: boolean | null }[]>,
   players: (sessionId: string) =>
     run(supabase.from('game_players').select('participant_id,points,answered,correct,best_streak,shield_until,frozen_until,hearts,out_at,updated_at').eq('session_id', sessionId)) as Promise<GamePlayerRow[]>,
   events: (sessionId: string, limit = 12) =>

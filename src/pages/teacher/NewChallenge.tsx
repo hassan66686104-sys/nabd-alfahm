@@ -1,7 +1,7 @@
-// إنشاء «تحدي الكأس»: يختار المعلم الدرس وأسئلته، وطريقة الفوز، ثم يلعب الطلاب وحدهم
+// إنشاء «تحدي الكأس»: يختار المعلم الدرس وأسئلته، ومن يتحكم في الأسئلة، وطريقة الفوز
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dices, LibraryBig, Timer, Trash2, Trophy, Users } from 'lucide-react';
+import { Dices, LibraryBig, ListOrdered, Timer, Trash2, Trophy, Users, Zap } from 'lucide-react';
 import { Badge, Button, Card, ErrorBox, Field, Input, PageHeader, Toggle, cx } from '@/components/ui';
 import QuestionPicker from '@/components/QuestionPicker';
 import PracticeLinkCard from '@/components/PracticeLinkCard';
@@ -26,6 +26,8 @@ export default function NewChallenge() {
   const [title, setTitle] = useState('');
   const [items, setItems] = useState<Question[]>([]);
   const [end, setEnd] = useState<'target' | 'time'>('target');
+  // من يتحكم في تقدم الأسئلة: كل طالب بسرعته (الافتراضي)، أو المعلم يرسل سؤالًا واحدًا للجميع ثم «التالي»
+  const [paced, setPaced] = useState(false);
   const [target, setTarget] = useState('100');
   const [minutes, setMinutes] = useState('10');
   // في «من يصل أولًا» الوقت حد أقصى اختياري؛ فارغ = بلا حد
@@ -74,7 +76,7 @@ export default function NewChallenge() {
         title: title.trim(), class_id: null, subject_id: items[0]?.subject_id ?? null, grade: items[0]?.grade ?? '', unit: items[0]?.unit ?? '', lesson: (chosen.join(' + ') || items[0]?.lesson || '').slice(0, 160),
         anonymous: false, hide_names: hideNames, hide_results: false, leaderboard_enabled: true, teams_enabled: teamsOn, auto_approve_open: false,
         mode: 'self',
-        game: { end, ...(end === 'target' ? { target: t, ...(maxMinutes.trim() ? { minutes: mx } : {}) } : { minutes: m }), powers, hearts: heartsOn ? 3 : 0, helps: helpsOn, ...(prize.trim() ? { prize: prize.trim().slice(0, 80) } : {}) },
+        game: { end, ...(end === 'target' ? { target: t, ...(maxMinutes.trim() ? { minutes: mx } : {}) } : { minutes: m }), powers, hearts: heartsOn ? 3 : 0, helps: helpsOn, ...(paced ? { paced: true } : {}), ...(prize.trim() ? { prize: prize.trim().slice(0, 80) } : {}) },
       }, items.map((q) => ({ question_id: q.id })), teamsOn ? teamNames.map((name, i) => ({ name, color: TEAM_COLORS[i % TEAM_COLORS.length] })) : []);
       toast('تم إنشاء التحدي');
       nav(`/t/challenge/${s.id}`);
@@ -133,7 +135,21 @@ export default function NewChallenge() {
       </Card>
 
       <Card className="space-y-3">
-        <h2 className="text-lg font-bold">2. كيف يُحسم الفوز؟</h2>
+        <h2 className="text-lg font-bold">2. من يتحكم في الأسئلة؟</h2>
+        <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="التحكم في الأسئلة" data-testid="challenge-pace">
+          {([[false, 'كل طالب بسرعته', 'ينتقل الطالب إلى السؤال التالي مباشرة بعد إجابته', Zap], [true, 'المعلم يتحكم في المسابقة', 'ترسل سؤالًا واحدًا فيظهر لكل الطلاب في نفس اللحظة، ثم تضغط «التالي»', ListOrdered]] as const).map(([v, label, hint, Icon]) => (
+            <button key={String(v)} type="button" role="radio" aria-checked={paced === v} onClick={() => setPaced(v)}
+              className={cx('rounded-xl border-2 p-3 text-start', paced === v ? 'border-gold-400 bg-gold-50' : 'border-brand-100')}>
+              <div className="flex items-center gap-2 font-bold"><Icon className="h-5 w-5" />{label}</div>
+              <div className="text-sm text-brand-600">{hint}</div>
+            </button>
+          ))}
+        </div>
+        {paced && <p className="rounded-xl bg-ivory-100 p-3 text-sm text-brand-700">تُرسل الأسئلة بالترتيب الظاهر أعلاه، ويمكنك أثناء التحدي اختيار أي سؤال لم يُرسل بعد. من لم يُجب قبل أن تضغط «التالي» يفوته السؤال.</p>}
+      </Card>
+
+      <Card className="space-y-3">
+        <h2 className="text-lg font-bold">3. كيف يُحسم الفوز؟</h2>
         <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="طريقة الفوز">
           {([['target', 'من يصل إلى الكأس أولًا', 'أول طالب يجمع النقاط المطلوبة يفوز وينتهي التحدي', Trophy], ['time', 'تحدٍّ بوقت محدد', 'عند انتهاء الوقت يفوز صاحب أعلى نقاط', Timer]] as const).map(([v, label, hint, Icon]) => (
             <button key={v} type="button" role="radio" aria-checked={end === v} onClick={() => setEnd(v)}
@@ -155,7 +171,7 @@ export default function NewChallenge() {
       </Card>
 
       <Card className="space-y-1">
-        <h2 className="text-lg font-bold">3. رقم الحظ والقلوب والمساعدات والمجموعات</h2>
+        <h2 className="text-lg font-bold">4. رقم الحظ والقلوب والمساعدات والمجموعات</h2>
         <Toggle checked={powers} onChange={setPowers} label="رقم الحظ والقدرات" hint="كل 3 إجابات صحيحة متتالية = رمية حظ من 1 إلى 6" />
         {powers && (
           <div className="grid gap-1.5 rounded-xl bg-ivory-100 p-3 sm:grid-cols-2">

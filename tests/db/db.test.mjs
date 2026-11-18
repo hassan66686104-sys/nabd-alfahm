@@ -846,3 +846,72 @@ test('حد إنشاء حسابات المعلمين بكلمة المرور فق
   assert.deepEqual(allowed, [true, true, true, true, true, false]);
   assert.equal((await as('service_role', null, 'select public.teacher_signup_allowed($1) as r', ['5.6.7.8'])).rows[0].r, true);
 });
+
+test('تحدي الكأس بتحكم المعلم: سؤال واحد لكل الطلاب معًا، والمعلم يضغط «التالي»', async () => {
+  const s = await rpc1(A, `insert into sessions(title, mode, game) values ('كأس بتحكم المعلم', 'self', '{"end":"target","target":100,"paced":true,"hearts":0}') returning *`);
+  const mk = (text) => JSON.stringify({ question_id: null, type: 'true_false', answer_format: 'single', text, stimulus_kind: 'none', answer_key: {},
+    options: [{ id: randomUUID(), position: 0, text: 'صح', is_correct: true }, { id: randomUUID(), position: 1, text: 'خطأ', is_correct: false }] });
+  const sq = [];
+  for (const [i, t] of ['الأول', 'الثاني', 'الثالث'].entries()) sq.push(await rpc1(A, 'insert into session_questions(session_id, snapshot, position) values ($1,$2::jsonb,$3) returning *', [s.id, mk(t), i + 1]));
+  const p1 = await join(s.code, 'مازن');
+  const p2 = await join(s.code, 'ريم');
+  const gs = async (p) => (await anon('select public.game_state($1,$2) as r', [p.participant_id, p.token])).rows[0].r;
+  const right = async (p, id) => {
+    const snap = (await A('select snapshot from session_questions where id=$1', [id])).rows[0].snapshot;
+    return (await anon('select public.game_submit($1,$2,$3,$4::jsonb,$5) as r', [p.participant_id, p.token, id, JSON.stringify({ option_id: snap.options[0].id }), randomUUID()])).rows[0].r;
+  };
+
+  // لا يرسل المعلم قبل البدء، ولا يتحكم معلم آخر
+  await assert.rejects(A('select public.game_send_question($1)', [s.id]), /GAME_NOT_STARTED/);
+  await A('select public.game_start($1)', [s.id]);
+  await assert.rejects(B('select public.game_send_question($1)', [s.id]), /NOT_FOUND/);
+  await assert.rejects(anon('select public.game_send_question($1)', [s.id]), /permission denied/);
+
+  // السؤال الأول فقط ظاهر، ولكل الطلاب نفس السؤال
+  const a1 = await gs(p1); const a2 = await gs(p2);
+  assert.equal(a1.question.sq_id, sq[0].id);
+  assert.equal(a2.question.sq_id, sq[0].id);
+  assert.equal(a1.question.number, 1);
+  assert.deepEqual(a1.session.paced, { sent: 1, total: 3 });
+
+  // من أجاب ينتظر المعلم (لا يرى «أنهيت كل الأسئلة»)، ولا يتقدم وحده
+  assert.equal((await right(p1, sq[0].id)).gain, 10);
+  const w = await gs(p1);
+  assert.equal(w.question, null);
+  assert.equal(w.me.waiting, true);
+  assert.equal(w.me.finished, false);
+  assert.equal(w.session.status, 'live');
+
+  // المعلم يختار سؤالًا بعينه (الثالث): يُغلق الأول ويظهر الثالث للجميع، ومن لم يُجب يفوته الأول
+  const c = (await A('select public.game_send_question($1,$2) as r', [s.id, sq[2].id])).rows[0].r;
+  assert.equal(c.sq_id, sq[2].id);
+  assert.equal(c.sent, 2);
+  assert.equal((await gs(p2)).question.sq_id, sq[2].id);
+  assert.equal((await gs(p1)).question.sq_id, sq[2].id);
+  assert.equal((await gs(p1)).question.number, 2);
+  assert.equal((await right(p2, sq[0].id)).error, 'QUESTION_NOT_FOUND');
+  // لا يُعاد إرسال سؤال سابق
+  await assert.rejects(A('select public.game_send_question($1,$2)', [s.id, sq[0].id]), /QUESTION_NOT_FOUND/);
+  // تبديل السؤال غير متاح في هذا الوضع
+  assert.equal((await anon('select public.game_help($1,$2,$3,$4) as r', [p1.participant_id, p1.token, sq[2].id, 'swap'])).rows[0].r.error, 'HELP_NOT_FOR_QUESTION');
+
+  // «التالي» يرسل أول سؤال لم يُرسل بعد (الثاني)، ثم لا يبقى شيء
+  const n = (await A('select public.game_send_question($1) as r', [s.id])).rows[0].r;
+  assert.equal(n.sq_id, sq[1].id, JSON.stringify(n));
+  assert.deepEqual((await gs(p2)).session.paced, { sent: 3, total: 3 });
+  assert.equal((await A('select public.game_send_question($1) as r', [s.id])).rows[0].r.done, true);
+  assert.equal((await gs(p2)).question.sq_id, sq[1].id);
+
+  await A('select public.game_end($1)', [s.id]);
+  const e = await gs(p1);
+  assert.equal(e.session.status, 'ended');
+  assert.equal(e.session.winner.id, p1.participant_id);
+  await assert.rejects(A('select public.game_send_question($1)', [s.id]), /GAME_OVER/);
+
+  // التحدي العادي لا يتأثر: كل الأسئلة مفتوحة، وإرسال المعلم مرفوض
+  const r = await rpc1(A, `insert into sessions(title, mode, game) values ('كأس عادي', 'self', '{"end":"target","target":100}') returning *`);
+  for (const t of ['أ', 'ب']) await A('insert into session_questions(session_id, snapshot) values ($1,$2::jsonb)', [r.id, mk(t)]);
+  await A('select public.game_start($1)', [r.id]);
+  assert.equal((await A(`select count(*)::int n from session_questions where session_id=$1 and status='open'`, [r.id])).rows[0].n, 2);
+  await assert.rejects(A('select public.game_send_question($1)', [r.id]), /NOT_A_GAME/);
+});
