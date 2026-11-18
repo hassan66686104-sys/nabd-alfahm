@@ -258,6 +258,7 @@ export interface GameSettings {
   prize?: string;
   hearts?: number; // عدد القلوب (0 = بلا قلوب ولا عقوبة)
   helps?: boolean; // وسائل المساعدة والمتجر
+  paced?: boolean; // المعلم يتحكم: سؤال واحد يظهر للجميع معًا، ثم «التالي»
 }
 export type GameHelp = 'fifty' | 'audience' | 'swap';
 export type ShopItem = GameHelp | 'heart' | 'shield' | 'double';
@@ -294,10 +295,11 @@ export interface GameTeamRow { id: string; name: string; color: string; points: 
 export interface GameState {
   ok: true;
   server_time: string;
-  session: { id: string; title: string; code: string; status: SessionStatus; mode: 'self'; game: GameSettings; started_at: string | null; ends_at: string | null; winner: { id: string; name: string; avatar?: string | null } | null };
+  session: { id: string; title: string; code: string; status: SessionStatus; mode: 'self'; game: GameSettings; started_at: string | null; ends_at: string | null; winner: { id: string; name: string; avatar?: string | null } | null; paced?: { sent: number; total: number } };
   me: {
     id: string; name: string; points: number; rank: number | null; answered: number; total: number; correct: number; streak: number;
     spins: number; power: GamePower | null; double_next: boolean; shield_until: string | null; frozen_until: string | null; team_id: string | null; finished: boolean;
+    waiting?: boolean; // وضع تحكم المعلم: أجاب وينتظر السؤال التالي
     avatar: string | null; hearts: number; max_hearts: number; out: boolean; helps: Record<GameHelp, number>;
   };
   question: Omit<StudentQuestion, 'status'> & { total: number; option_count?: number; fifty_used?: boolean; audience?: { id: string; pct: number }[] | null } | null;

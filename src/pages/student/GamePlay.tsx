@@ -87,6 +87,14 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
     return () => { clearInterval(id); document.removeEventListener('visibilitychange', vis); window.removeEventListener('online', vis); };
   }, [refresh]);
 
+  // وضع تحكم المعلم: إذا أرسل المعلم سؤالًا جديدًا قبل أن يجيب الطالب، يظهر الجديد فورًا
+  useEffect(() => {
+    if (!gs?.session.game.paced || !shown || feedback || sending) return;
+    if (gs.question?.sq_id === shown.sq_id) return;
+    if (gs.question) { const q = { ...gs.question, status: 'open' } as Shown; setShown(q); setDraft(emptyAnswer(q)); }
+    else setShown(null);
+  }, [gs, shown, feedback, sending]);
+
   // السؤال المعروض لا يتغير أثناء عرض نتيجة الإجابة
   useEffect(() => {
     if (!gs || feedback || shown) return;
@@ -344,6 +352,7 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
               </div>
             ) : <p className="text-brand-600">بانتظار {gs.board.find((r) => r.id === g.host)?.name ?? 'صاحب التحدي'} ليبدأ التحدي. استعد!</p>
           ) : <p className="text-brand-600">سيبدأ التحدي عندما يضغط المعلم «ابدأ».</p>}
+          {g.paced && <p className="rounded-xl bg-violet-50 p-3 font-bold text-violet-800" data-testid="paced-lobby">👩‍🏫 المعلم يرسل الأسئلة واحدًا تلو الآخر، ويظهر كل سؤال لكل الطلاب في نفس اللحظة.</p>}
           <p className="text-brand-600">أجب بسرعة وبدقة: كل إجابة صحيحة = 10 نقاط.</p>
           {(heartsOn || helpsOn) && (
             <div className="grid gap-2 text-start text-sm sm:grid-cols-2">
@@ -392,7 +401,7 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
   const helpOk: Record<GameHelp, boolean> = {
     fifty: choiceQ && !q?.fifty_used,
     audience: choiceQ && !q?.audience,
-    swap: true,
+    swap: !g.paced,
   };
 
   return (
@@ -440,8 +449,8 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
       )}
 
       {helpsOn && q && !feedback && (
-        <div className="grid grid-cols-4 gap-2" data-testid="helps">
-          {(Object.keys(HELPS) as GameHelp[]).map((k) => {
+        <div className={g.paced ? 'grid grid-cols-3 gap-2' : 'grid grid-cols-4 gap-2'} data-testid="helps">
+          {(Object.keys(HELPS) as GameHelp[]).filter((k) => !(g.paced && k === 'swap')).map((k) => {
             const n = me.helps?.[k] ?? 0;
             return (
               <button key={k} type="button" onClick={() => applyHelp(k)} disabled={!!helping || n < 1 || !helpOk[k] || !canAnswer}
@@ -502,6 +511,12 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
             <Button size="xl" className="w-full bg-gradient-to-r from-fuchsia-600 to-purple-700 text-white shadow-lg hover:from-fuchsia-500 hover:to-purple-600" disabled={!canAnswer || !answerComplete(q, draft)} loading={sending} onClick={submit}>إرسال الإجابة</Button>
           )}
         </Card>
+      ) : me.waiting ? (
+        <Card className="space-y-2 py-8 text-center" data-testid="paced-waiting">
+          <Loader2 className="mx-auto h-12 w-12 animate-spin text-violet-500" />
+          <h2 className="text-xl font-extrabold">انتظر السؤال التالي من المعلم</h2>
+          <p className="text-brand-600">سيظهر السؤال لك ولزملائك في نفس اللحظة{gs.session.paced ? ` · أُرسل ${gs.session.paced.sent} من ${gs.session.paced.total}` : ''}.</p>
+        </Card>
       ) : me.finished ? (
         <Card className="space-y-2 py-8 text-center">
           <Flag className="mx-auto h-14 w-14 text-fuchsia-500 motion-safe:animate-wiggle" />
@@ -527,7 +542,7 @@ export default function GamePlay({ p }: { p: StoredParticipant }) {
         <div className="space-y-3" data-testid="shop">
           <p className="text-brand-700">اشترِ بنقاطك. لديك <b className="text-purple-700">{me.points}</b> نقطة.</p>
           <div className="grid gap-2 sm:grid-cols-2">
-            {SHOP.filter((it) => heartsOn || it.item !== 'heart').map((it) => (
+            {SHOP.filter((it) => (heartsOn || it.item !== 'heart') && !(g.paced && it.item === 'swap')).map((it) => (
               <button key={it.item} type="button" disabled={!!buying || me.points < it.price} onClick={() => buy(it.item)}
                 className="flex items-center justify-between gap-2 rounded-2xl border-2 border-purple-100 bg-white p-3 text-start transition hover:border-purple-400 hover:bg-purple-50 disabled:opacity-50">
                 <span className="flex items-center gap-2 font-bold"><span className="text-3xl">{it.emoji}</span>{it.title}</span>

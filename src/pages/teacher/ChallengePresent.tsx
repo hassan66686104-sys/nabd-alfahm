@@ -61,6 +61,19 @@ export default function ChallengePresent({ id }: { id: string }) {
             {s.status === 'lobby' && <div className="flex justify-center"><JoinInfo code={s.code} count={c.joined} large /></div>}
             {s.status === 'lobby' && <div className="rounded-3xl bg-white/90 p-6 shadow-card"><WaitingRoom people={c.waiting.map((w) => ({ ...w, name: w.shown }))} large sound /></div>}
             {s.status === 'live' && <div className="flex justify-center"><JoinInfo code={s.code} count={c.joined} compact /></div>}
+            {s.status === 'live' && c.paced?.current && (
+              <div className="space-y-4 rounded-3xl bg-white/95 p-6 text-center shadow-card" data-testid="present-paced-question">
+                <div className="text-xl font-bold text-violet-700">السؤال {c.paced.sent} من {c.paced.total} · أجاب {c.paced.answered} من {c.paced.active}</div>
+                <p className="text-4xl font-extrabold leading-snug">{c.paced.current.snapshot.text}</p>
+                {['single', 'multi'].includes(c.paced.current.snapshot.answer_format) && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {[...c.paced.current.snapshot.options].sort((a, b) => a.position - b.position).map((o, i) => (
+                      <div key={o.id} className="rounded-2xl bg-brand-50 px-4 py-3 text-2xl font-bold text-brand-800">{'أبجدهوزح'[i] ?? ''} · {o.text}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <TeamScores teams={c.teamRows} large />
             <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
               <Leaderboard rows={c.rows} target={target} limit={10} large />

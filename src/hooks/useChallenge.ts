@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { game, getSession, listParticipants, listSessionQuestions, listTeams, live, type GameEventRow, type GamePlayerRow } from '@/lib/api';
 import { toAppError } from '@/lib/errors';
-import type { GameBoardRow, GameEvent, GameTeamRow, Participant, Session, Team } from '@/lib/types';
+import type { GameBoardRow, GameEvent, GameTeamRow, Participant, Session, SessionQuestion, Team } from '@/lib/types';
 
 export function useChallenge(sessionId: string | undefined) {
   const [session, setSession] = useState<Session | null>(null);
@@ -11,6 +11,9 @@ export function useChallenge(sessionId: string | undefined) {
   const [players, setPlayers] = useState<GamePlayerRow[]>([]);
   const [events, setEvents] = useState<GameEventRow[]>([]);
   const [questionCount, setQuestionCount] = useState(0);
+  // وضع تحكم المعلم: أسئلة التحدي بحالتها، ومن أجاب عن السؤال الحالي
+  const [questions, setQuestions] = useState<SessionQuestion[]>([]);
+  const [answers, setAnswers] = useState<{ participant_id: string; is_correct: boolean | null }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [clockOffset, setClockOffset] = useState(0);
@@ -21,6 +24,12 @@ export function useChallenge(sessionId: string | undefined) {
     busy.current = true;
     try {
       const [s, p, t, g, e] = await Promise.all([getSession(sessionId), listParticipants(sessionId), listTeams(sessionId), game.players(sessionId), game.events(sessionId)]);
+      if (s.game?.paced) {
+        const qs = await listSessionQuestions(sessionId);
+        const cur = qs.find((q) => q.status === 'open');
+        setQuestions(qs);
+        setAnswers(cur && s.status !== 'lobby' ? await game.answers(cur.id) : []);
+      }
       setSession(s); setParticipants(p); setTeams(t); setPlayers(g); setEvents(e);
       setError(null);
     } catch (err) {
@@ -81,5 +90,16 @@ export function useChallenge(sessionId: string | undefined) {
     return { rows, teamRows, feed, winner, waiting, joined: present.length };
   }, [session, participants, teams, players, events, clockOffset]);
 
-  return { session, setSession, questionCount, error, loading, clockOffset, reload, ...view };
+  // السؤال الحالي في وضع تحكم المعلم وما بقي من أسئلة
+  const paced = useMemo(() => {
+    if (!session?.game?.paced) return null;
+    const current = session.status === 'live' ? questions.find((q) => q.status === 'open') ?? null : null;
+    const remaining = questions.filter((q) => q.status === 'draft');
+    const sent = questions.length - remaining.length;
+    const active = participants.filter((p) => !p.is_removed).length;
+    const correct = answers.filter((a) => a.is_correct).length;
+    return { current, remaining, sent, total: questions.length, answered: answers.length, correct, active };
+  }, [session, questions, answers, participants]);
+
+  return { session, setSession, questionCount, error, loading, clockOffset, reload, paced, ...view };
 }
